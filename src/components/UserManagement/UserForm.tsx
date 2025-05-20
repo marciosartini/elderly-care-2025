@@ -14,11 +14,17 @@ interface UserFormProps {
   onSuccess: () => void;
 }
 
+// Define a type that extends User with the optional fields we're using
+interface ExtendedUser extends User {
+  accessLevel?: "basic" | "full" | "limited";
+  password?: string;
+}
+
 const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
-  const [status, setStatus] = useState<"active" | "pending" | "inactive">("active");
+  const [status, setStatus] = useState<"active" | "pending">("active");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [accessLevel, setAccessLevel] = useState<"basic" | "full" | "limited">("basic");
@@ -30,8 +36,9 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
       setName(user.name);
       setEmail(user.email);
       setRole(user.role);
-      setStatus(user.status as "active" | "pending" | "inactive");
-      setAccessLevel(user.accessLevel || "basic");
+      setStatus(user.status as "active" | "pending");
+      // Safely access accessLevel if it exists
+      setAccessLevel((user as ExtendedUser).accessLevel || "basic");
     }
   }, [user]);
 
@@ -79,11 +86,11 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
 
     try {
       if (isEditing && user) {
-        const updateData: Partial<User> = {
+        const updateData: Partial<ExtendedUser> = {
           name,
           email,
           role,
-          status,
+          status: status as "active" | "pending",
           accessLevel
         };
 
@@ -92,7 +99,7 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
           updateData.password = password;
         }
 
-        usersStore.updateUser(user.id, updateData);
+        usersStore.updateUser(user.id, updateData as Partial<User>);
         toast.success("Usuário atualizado com sucesso");
       } else {
         usersStore.addUser({
@@ -102,7 +109,7 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
           status: 'active', // Admin creates active users
           accessLevel,
           password: password
-        });
+        } as Omit<User, "id" | "createdAt">);
         toast.success("Usuário criado com sucesso");
       }
       
@@ -165,7 +172,7 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
               <Label htmlFor="status">Status</Label>
               <Select
                 value={status}
-                onValueChange={(value) => setStatus(value as "active" | "pending" | "inactive")}
+                onValueChange={(value) => setStatus(value as "active" | "pending")}
                 disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
               >
                 <SelectTrigger>
@@ -174,7 +181,7 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
                 <SelectContent>
                   <SelectItem value="active">Ativo</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
+                  {/* Removed "inactive" option since it's not in the expected type */}
                 </SelectContent>
               </Select>
             </div>

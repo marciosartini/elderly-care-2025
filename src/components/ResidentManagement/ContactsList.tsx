@@ -10,12 +10,14 @@ import ContactForm from "./ContactForm";
 import { toast } from "sonner";
 
 interface ContactsListProps {
-  residentId: string;
+  residentId?: string;
   contacts: Contact[];
-  onContactsChange: () => void;
+  onContactsChange?: () => void;
+  onEdit?: (contact: Contact) => void;
+  onDelete?: (contactId: string) => void;
 }
 
-const ContactsList = ({ residentId, contacts, onContactsChange }: ContactsListProps) => {
+const ContactsList = ({ residentId, contacts, onContactsChange, onEdit, onDelete }: ContactsListProps) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = useState<Contact | null>(null);
@@ -26,20 +28,30 @@ const ContactsList = ({ residentId, contacts, onContactsChange }: ContactsListPr
   };
 
   const handleEditContact = (contact: Contact) => {
+    // Use the provided onEdit if available
+    if (onEdit) {
+      onEdit(contact);
+      return;
+    }
     setSelectedContact(contact);
     setShowForm(true);
   };
 
   const handleDeleteContact = (contact: Contact) => {
+    // Use the provided onDelete if available
+    if (onDelete) {
+      onDelete(contact.id);
+      return;
+    }
     setConfirmDelete(contact);
   };
 
   const confirmDeleteContact = () => {
-    if (confirmDelete) {
+    if (confirmDelete && residentId) {
       residentsStore.deleteResidentContact(residentId, confirmDelete.id);
       toast.success("Contato removido com sucesso");
       setConfirmDelete(null);
-      onContactsChange();
+      if (onContactsChange) onContactsChange();
     }
   };
 
@@ -51,10 +63,10 @@ const ContactsList = ({ residentId, contacts, onContactsChange }: ContactsListPr
   const handleFormSuccess = () => {
     setShowForm(false);
     setSelectedContact(undefined);
-    onContactsChange();
+    if (onContactsChange) onContactsChange();
   };
 
-  if (showForm) {
+  if (showForm && residentId) {
     return (
       <ContactForm 
         residentId={residentId}
@@ -72,14 +84,16 @@ const ContactsList = ({ residentId, contacts, onContactsChange }: ContactsListPr
           <h3 className="text-lg font-medium">Contatos</h3>
           <p className="text-sm text-muted-foreground">Gerenciar contatos do residente</p>
         </div>
-        <Button 
-          variant="outline" 
-          className="border-custom-blue text-custom-blue"
-          onClick={handleAddContact}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Contato
-        </Button>
+        {residentId && (
+          <Button 
+            variant="outline" 
+            className="border-custom-blue text-custom-blue"
+            onClick={handleAddContact}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Adicionar Contato
+          </Button>
+        )}
       </div>
 
       {contacts.length === 0 ? (

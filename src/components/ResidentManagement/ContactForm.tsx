@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +8,14 @@ import { toast } from "sonner";
 import { Contact, residentsStore } from "@/lib/residentStore";
 
 interface ContactFormProps {
-  residentId: string;
+  residentId?: string;
   contact?: Contact;
   onCancel: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  onSave?: (contact: Contact) => void;
 }
 
-const ContactForm = ({ residentId, contact, onCancel, onSuccess }: ContactFormProps) => {
+const ContactForm = ({ residentId, contact, onCancel, onSuccess, onSave }: ContactFormProps) => {
   const [name, setName] = useState(contact?.name || "");
   const [phone, setPhone] = useState(contact?.phone || "");
   const [email, setEmail] = useState(contact?.email || "");
@@ -56,14 +56,23 @@ const ContactForm = ({ residentId, contact, onCancel, onSuccess }: ContactFormPr
     };
 
     try {
-      if (isEditing && contact) {
-        residentsStore.updateResidentContact(residentId, contact.id, contactData);
-        toast.success("Contato atualizado com sucesso");
-      } else {
-        residentsStore.addContactToResident(residentId, contactData);
-        toast.success("Contato adicionado com sucesso");
+      if (onSave) {
+        // If onSave is provided, use it (for nested forms in ResidentForm)
+        onSave({
+          ...(contact || { id: '' }),
+          ...contactData
+        });
+      } else if (residentId) {
+        // Otherwise use the store directly (for standalone forms)
+        if (isEditing && contact) {
+          residentsStore.updateResidentContact(residentId, contact.id, contactData);
+          toast.success("Contato atualizado com sucesso");
+        } else {
+          residentsStore.addContactToResident(residentId, contactData);
+          toast.success("Contato adicionado com sucesso");
+        }
+        if (onSuccess) onSuccess();
       }
-      onSuccess();
     } catch (error) {
       console.error("Error saving contact:", error);
       toast.error("Erro ao salvar contato");
