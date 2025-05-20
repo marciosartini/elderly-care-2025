@@ -35,6 +35,15 @@ const BasicInfoStep = ({
   setDiastolic,
   loading
 }: BasicInfoStepProps) => {
+  // Function to ensure we always have a valid value for resident IDs
+  const getResidentId = (resident: Resident, index: number): string => {
+    if (resident.id && resident.id.trim() !== "") {
+      return resident.id;
+    }
+    // Use a stable, deterministic ID if the resident doesn't have one
+    return `resident_${index}_${resident.name.replace(/\s+/g, '_').toLowerCase()}`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -49,14 +58,17 @@ const BasicInfoStep = ({
               <SelectValue placeholder="Selecione um residente" />
             </SelectTrigger>
             <SelectContent>
-              {residents.map((resident) => (
-                <SelectItem 
-                  key={resident.id || `resident-${Math.random()}`} 
-                  value={resident.id || `_resident_${Math.random().toString(36).substring(2)}`}
-                >
-                  {resident.name}
-                </SelectItem>
-              ))}
+              {residents.map((resident, index) => {
+                const residentId = getResidentId(resident, index);
+                return (
+                  <SelectItem 
+                    key={`resident-${residentId}`} 
+                    value={residentId}
+                  >
+                    {resident.name}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
