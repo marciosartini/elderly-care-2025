@@ -50,7 +50,10 @@ const BasicInfoStep = ({
             </SelectTrigger>
             <SelectContent>
               {residents.map((resident) => (
-                <SelectItem key={resident.id} value={resident.id || "_no_id_"}>
+                <SelectItem 
+                  key={resident.id || `resident-${Math.random()}`} 
+                  value={resident.id || `_resident_${Math.random().toString(36).substring(2)}`}
+                >
                   {resident.name}
                 </SelectItem>
               ))}
