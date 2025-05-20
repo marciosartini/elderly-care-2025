@@ -45,11 +45,17 @@ const ProfessionForm = ({ profession, onCancel, onSuccess }: ProfessionFormProps
 
   const onSubmit = (values: FormValues) => {
     try {
+      // Fix: Ensure required properties are not undefined
+      const professionData = {
+        name: values.name,
+        description: values.description,
+      };
+      
       if (editing && profession) {
-        professionsStore.updateProfession(profession.id, values);
+        professionsStore.updateProfession(profession.id, professionData);
         toast.success("Profissão atualizada com sucesso!");
       } else {
-        professionsStore.addProfession(values);
+        professionsStore.addProfession(professionData);
         toast.success("Profissão cadastrada com sucesso!");
       }
       onSuccess();
