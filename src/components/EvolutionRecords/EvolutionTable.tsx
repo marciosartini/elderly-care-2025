@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -10,7 +9,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Eye, Trash2 } from "lucide-react";
-import { EvolutionEntry } from "@/lib/evolutionStore";
+import { EvolutionEntry } from "@/lib/evolution/types";
 
 interface EvolutionTableProps {
   evolutions: EvolutionEntry[];

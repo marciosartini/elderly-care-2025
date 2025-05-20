@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { FileText, Download, Filter, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Resident } from "@/lib/residentStore";
 import { printEvolutionReport } from "@/lib/printUtils";
-import { evolutionsStore } from "@/lib/evolutionStore";
+import { evolutionsStore } from "@/lib/evolution";
 
 interface EvolutionFiltersProps {
   residents: Resident[];

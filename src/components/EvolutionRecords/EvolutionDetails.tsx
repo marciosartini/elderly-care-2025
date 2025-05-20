@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { EvolutionEntry } from "@/lib/evolutionStore";
+import { EvolutionEntry } from "@/lib/evolution/types";
 import { residentsStore } from "@/lib/residentStore";
 import { ReactNode } from "react";
 import { HeartPulse, Droplet, Activity, Brain, Users, Star, FileText } from "lucide-react";

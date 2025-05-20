@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { EvolutionEntry, evolutionsStore } from "@/lib/evolutionStore";
+import { EvolutionEntry, evolutionsStore } from "@/lib/evolution";
 import { residentsStore, Resident } from "@/lib/residentStore";
 
 export const useEvolutionList = () => {
