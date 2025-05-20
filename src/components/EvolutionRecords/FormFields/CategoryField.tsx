@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,13 +46,14 @@ const CategoryField = ({
 
   switch (category.fieldType) {
     case "text":
+      // Check specifically for notes category to make the text area larger
       return (
         <Textarea
           value={formData[category.id] || ""}
           onChange={(e) => handleInputChange(category.id, e.target.value)}
           disabled={loading}
           placeholder={category.placeholder || `Informe ${category.title.toLowerCase()}`}
-          className="min-h-[80px]"
+          className={category.id === "notes" ? "min-h-[150px]" : "min-h-[80px]"}
         />
       );
 

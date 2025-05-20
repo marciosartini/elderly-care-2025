@@ -46,6 +46,12 @@ export const ADDITIONAL_CATEGORIES = [
       { id: "wheezing", value: "wheezing", label: "Chiado", color: "bg-yellow-100", icon: "alert-triangle" },
       { id: "shortness", value: "shortness", label: "Falta de ar", color: "bg-red-100", icon: "x" }
     ]
+  },
+  {
+    id: "notes",
+    title: "Observações Adicionais",
+    fieldType: "text",
+    placeholder: "Insira aqui quaisquer observações relevantes sobre o paciente"
   }
 ];
 
