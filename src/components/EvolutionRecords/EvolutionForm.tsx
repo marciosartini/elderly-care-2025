@@ -38,19 +38,26 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     getCurrentStepCategories
   } = useEvolutionForm(onSuccess);
 
+  // Ensure EVOLUTION_STEPS have valid IDs
+  const validatedSteps = EVOLUTION_STEPS.map((step, index) => ({
+    ...step,
+    id: step.id && step.id.trim() !== "" ? step.id : `step-${index}`,
+    title: step.title || `Passo ${index + 1}`
+  }));
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          Registrar Evolução - {currentStep < EVOLUTION_STEPS.length
-            ? EVOLUTION_STEPS[currentStep].title
+          Registrar Evolução - {currentStep < validatedSteps.length
+            ? validatedSteps[currentStep].title
             : "Revisão Final"
           }
         </CardTitle>
       </CardHeader>
       <form>
         <CardContent className="space-y-6">
-          <StepIndicator steps={EVOLUTION_STEPS} currentStep={currentStep} />
+          <StepIndicator steps={validatedSteps} currentStep={currentStep} />
           
           {currentStep === 0 && (
             <BasicInfoStep 
@@ -81,7 +88,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
           <div className="w-full bg-gray-200 rounded-full h-2 mt-6">
             <div 
               className="bg-custom-blue h-2 rounded-full transition-all" 
-              style={{ width: `${(currentStep / EVOLUTION_STEPS.length) * 100}%` }} 
+              style={{ width: `${(currentStep / validatedSteps.length) * 100}%` }} 
             />
           </div>
         </CardContent>
@@ -89,7 +96,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
         <CardFooter>
           <FormFooter 
             currentStep={currentStep}
-            totalSteps={EVOLUTION_STEPS.length}
+            totalSteps={validatedSteps.length}
             basicInfoComplete={basicInfoComplete}
             loading={loading}
             handlePrevStep={handlePrevStep}

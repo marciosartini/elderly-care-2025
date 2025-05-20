@@ -10,8 +10,10 @@ const StepIndicator = ({ steps, currentStep }: StepIndicatorProps) => {
   return (
     <div className="flex justify-center space-x-2 mb-4">
       {steps.map((step, index) => {
-        // Ensure step has a valid key by using index as fallback
-        const stepKey = step.id && step.id.trim() !== "" ? step.id : `step-${index}`;
+        // Generate a consistent unique key for each step
+        const stepKey = (step.id && step.id.trim() !== "") 
+          ? step.id 
+          : `step-${index}-${step.title.replace(/\s+/g, '-').toLowerCase() || 'unnamed'}`;
         
         return (
           <div
@@ -23,7 +25,7 @@ const StepIndicator = ({ steps, currentStep }: StepIndicatorProps) => {
                 ? "step-complete"
                 : "step-incomplete"
             }`}
-            title={step.title}
+            title={step.title || `Passo ${index + 1}`}
           >
             {index < currentStep ? (
               <Check size={16} />

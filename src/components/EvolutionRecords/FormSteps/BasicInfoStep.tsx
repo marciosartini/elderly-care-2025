@@ -41,7 +41,7 @@ const BasicInfoStep = ({
       return resident.id;
     }
     // Use a stable, deterministic ID if the resident doesn't have one
-    return `resident_${index}_${resident.name.replace(/\s+/g, '_').toLowerCase()}`;
+    return `resident_${index}_${resident.name.replace(/\s+/g, '_').toLowerCase() || 'unnamed'}`;
   };
 
   return (
@@ -58,17 +58,26 @@ const BasicInfoStep = ({
               <SelectValue placeholder="Selecione um residente" />
             </SelectTrigger>
             <SelectContent>
-              {residents.map((resident, index) => {
-                const residentId = getResidentId(resident, index);
-                return (
-                  <SelectItem 
-                    key={`resident-${residentId}`} 
-                    value={residentId}
-                  >
-                    {resident.name}
-                  </SelectItem>
-                );
-              })}
+              {residents.length > 0 ? (
+                residents.map((resident, index) => {
+                  const residentId = getResidentId(resident, index);
+                  return (
+                    <SelectItem 
+                      key={`resident-${residentId}`} 
+                      value={residentId}
+                    >
+                      {resident.name || `Residente ${index + 1}`}
+                    </SelectItem>
+                  );
+                })
+              ) : (
+                <SelectItem 
+                  key="no-residents" 
+                  value="no_residents_available"
+                >
+                  Nenhum residente disponível
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
