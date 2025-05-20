@@ -11,7 +11,7 @@ const StepIndicator = ({ steps, currentStep }: StepIndicatorProps) => {
     <div className="flex justify-center space-x-2 mb-4">
       {steps.map((step, index) => (
         <div
-          key={step.id}
+          key={step.id || `step-${index}`}
           className={`step-indicator ${
             index === currentStep
               ? "step-active"

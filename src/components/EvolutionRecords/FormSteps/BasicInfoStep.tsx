@@ -50,7 +50,7 @@ const BasicInfoStep = ({
             </SelectTrigger>
             <SelectContent>
               {residents.map((resident) => (
-                <SelectItem key={resident.id} value={resident.id}>
+                <SelectItem key={resident.id} value={resident.id || "_no_id_"}>
                   {resident.name}
                 </SelectItem>
               ))}
