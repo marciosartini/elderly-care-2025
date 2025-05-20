@@ -37,11 +37,18 @@ const BasicInfoStep = ({
 }: BasicInfoStepProps) => {
   // Function to ensure we always have a valid value for resident IDs
   const getResidentId = (resident: Resident, index: number): string => {
+    // First check if the resident has a valid ID
     if (resident.id && resident.id.trim() !== "") {
       return resident.id;
     }
-    // Use a stable, deterministic ID if the resident doesn't have one
-    return `resident_${index}_${resident.name.replace(/\s+/g, '_').toLowerCase() || 'unnamed'}`;
+    
+    // If the resident has a name, use it to create a unique ID
+    if (resident.name && resident.name.trim() !== "") {
+      return `resident_${index}_${resident.name.replace(/\s+/g, '_').toLowerCase()}`;
+    }
+    
+    // Final fallback: use index only to ensure we never return an empty string
+    return `resident_${index}_unnamed`;
   };
 
   return (
@@ -66,7 +73,7 @@ const BasicInfoStep = ({
                       key={`resident-${residentId}`} 
                       value={residentId}
                     >
-                      {resident.name || `Residente ${index + 1}`}
+                      {resident.name && resident.name.trim() !== "" ? resident.name : `Residente ${index + 1}`}
                     </SelectItem>
                   );
                 })

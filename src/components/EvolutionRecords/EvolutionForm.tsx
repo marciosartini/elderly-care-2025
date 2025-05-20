@@ -38,11 +38,13 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     getCurrentStepCategories
   } = useEvolutionForm(onSuccess);
 
-  // Ensure EVOLUTION_STEPS have valid IDs
+  // Make sure all steps have valid IDs and titles
   const validatedSteps = EVOLUTION_STEPS.map((step, index) => ({
     ...step,
-    id: step.id && step.id.trim() !== "" ? step.id : `step-${index}`,
-    title: step.title || `Passo ${index + 1}`
+    // Ensure step has a valid ID (never empty string)
+    id: step.id && step.id.trim() !== "" ? step.id : `step-${index}-${Date.now()}`,
+    // Ensure step has a valid title (never empty string)
+    title: step.title && step.title.trim() !== "" ? step.title : `Passo ${index + 1}`
   }));
 
   return (
