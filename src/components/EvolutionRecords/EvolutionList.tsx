@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +106,9 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
     }, 1500);
   };
 
+  // Ensure the empty value is replaced with a default value for the "all residents" option
+  const allResidentsValue = "all_residents";
+
   return (
     <div className="space-y-4">
       <Card>
@@ -115,17 +117,17 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
             <div className="space-y-2 flex-1">
               <Label htmlFor="residentFilter">Filtrar por Residente</Label>
               <Select
-                value={selectedResidentId}
+                value={selectedResidentId || allResidentsValue}
                 onValueChange={setSelectedResidentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os residentes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os residentes</SelectItem>
+                  <SelectItem value={allResidentsValue}>Todos os residentes</SelectItem>
                   {residents.map((resident) => (
-                    <SelectItem key={resident.id} value={resident.id}>
-                      {resident.name}
+                    <SelectItem key={resident.id} value={resident.id || `resident-${resident.name || "unnamed"}`}>
+                      {resident.name || "Residente sem nome"}
                     </SelectItem>
                   ))}
                 </SelectContent>
