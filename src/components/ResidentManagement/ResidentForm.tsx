@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Resident, residentsStore } from "@/lib/residentStore";
-import ContactForm from "./ContactForm";
+import ContactsList from "./ContactsList";
 
 interface ResidentFormProps {
   resident?: Resident;
@@ -35,6 +34,8 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
   const [admissionDate, setAdmissionDate] = useState(
     new Date().toISOString().split('T')[0]
   );
+  const [contacts, setContacts] = useState<Resident['contacts']>([]);
+  const [residentId, setResidentId] = useState<string>("");
 
   useEffect(() => {
     if (resident) {
@@ -49,6 +50,8 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
       setPhone(resident.phone);
       setEmail(resident.email);
       setAdmissionDate(resident.admissionDate);
+      setContacts(resident.contacts || []);
+      setResidentId(resident.id);
     }
   }, [resident]);
 
@@ -111,7 +114,7 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
       phone,
       email,
       admissionDate,
-      contacts: resident?.contacts || [],
+      contacts,
     };
 
     try {
@@ -119,10 +122,18 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
         residentsStore.updateResident(resident.id, residentData);
         toast.success("Residente atualizado com sucesso");
       } else {
-        residentsStore.addResident(residentData);
+        const newResident = residentsStore.addResident(residentData);
+        setResidentId(newResident.id);
         toast.success("Residente cadastrado com sucesso");
+        setActiveTab("contacts"); // Switch to contacts tab for a new resident
       }
-      onSuccess();
+      
+      if (!isEditing) {
+        // If new resident, keep the form open to add contacts
+        setIsEditing(true);
+      } else {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Error saving resident:", error);
       toast.error("Erro ao salvar residente");
@@ -130,6 +141,9 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
       setLoading(false);
     }
   };
+
+  // Keep track if we've saved the initial form
+  const [isEditing, setIsEditing] = useState(!!resident);
 
   const formatCPF = (value: string) => {
     // Remove non-digits
@@ -161,22 +175,35 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
     }
   };
 
+  // Reload contacts
+  const handleContactsChange = () => {
+    if (isEditing && residentId) {
+      const updatedResident = residentsStore.getResidentById(residentId);
+      if (updatedResident) {
+        setContacts(updatedResident.contacts);
+      }
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{isEditing ? "Editar Residente" : "Novo Residente"}</CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="px-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
-              <TabsTrigger value="contact">Endereço e Contato</TabsTrigger>
-            </TabsList>
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="px-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
+            <TabsTrigger value="contact">Endereço e Contato</TabsTrigger>
+            <TabsTrigger value="contacts" disabled={!isEditing}>
+              Lista de Contatos
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-          <CardContent className="pt-6">
-            <TabsContent value="personal" className="space-y-4">
+        <CardContent className="pt-6">
+          <TabsContent value="personal">
+            <form onSubmit={(e) => { e.preventDefault(); setActiveTab("contact"); }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo *</Label>
@@ -244,18 +271,27 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button 
+              <div className="flex justify-between pt-2">
+                <Button
                   type="button"
-                  onClick={() => setActiveTab("contact")}
+                  variant="outline"
+                  onClick={onCancel}
+                  disabled={loading}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
                   className="bg-custom-blue hover:bg-custom-blue/90"
                 >
                   Próximo
                 </Button>
               </div>
-            </TabsContent>
+            </form>
+          </TabsContent>
 
-            <TabsContent value="contact" className="space-y-4">
+          <TabsContent value="contact">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Endereço *</Label>
@@ -350,14 +386,48 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
                     className="bg-custom-blue hover:bg-custom-blue/90"
                     disabled={loading}
                   >
-                    {loading ? "Salvando..." : "Salvar"}
+                    {isEditing ? "Salvar" : "Salvar e Continuar"}
                   </Button>
                 </div>
               </div>
-            </TabsContent>
-          </CardContent>
-        </Tabs>
-      </form>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="contacts">
+            {residentId ? (
+              <div className="space-y-6">
+                <ContactsList 
+                  residentId={residentId} 
+                  contacts={contacts}
+                  onContactsChange={handleContactsChange}
+                />
+                
+                <div className="flex justify-between pt-2">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("contact")}
+                  >
+                    Anterior
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    className="bg-custom-blue hover:bg-custom-blue/90"
+                    onClick={onSuccess}
+                  >
+                    Concluir
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p>Salve os dados do residente primeiro para adicionar contatos.</p>
+              </div>
+            )}
+          </TabsContent>
+        </CardContent>
+      </Tabs>
     </Card>
   );
 };

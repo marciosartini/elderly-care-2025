@@ -18,8 +18,10 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
+  const [status, setStatus] = useState<"active" | "pending" | "inactive">("active");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [accessLevel, setAccessLevel] = useState<"basic" | "full" | "limited">("basic");
   const [loading, setLoading] = useState(false);
   const isEditing = !!user;
 
@@ -28,6 +30,8 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
       setName(user.name);
       setEmail(user.email);
       setRole(user.role);
+      setStatus(user.status as "active" | "pending" | "inactive");
+      setAccessLevel(user.accessLevel || "basic");
     }
   }, [user]);
 
@@ -48,21 +52,19 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
       return false;
     }
 
-    if (!isEditing) {
-      if (!password) {
-        toast.error("Senha é obrigatória");
-        return false;
-      }
+    if (!isEditing && !password) {
+      toast.error("Senha é obrigatória para novos usuários");
+      return false;
+    }
 
-      if (password.length < 6) {
-        toast.error("Senha deve ter pelo menos 6 caracteres");
-        return false;
-      }
+    if (password && password.length < 6) {
+      toast.error("Senha deve ter pelo menos 6 caracteres");
+      return false;
+    }
 
-      if (password !== confirmPassword) {
-        toast.error("Senhas não coincidem");
-        return false;
-      }
+    if (password && password !== confirmPassword) {
+      toast.error("Senhas não coincidem");
+      return false;
     }
 
     return true;
@@ -77,11 +79,20 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
 
     try {
       if (isEditing && user) {
-        usersStore.updateUser(user.id, {
+        const updateData: Partial<User> = {
           name,
           email,
           role,
-        });
+          status,
+          accessLevel
+        };
+
+        // Only update password if provided
+        if (password) {
+          updateData.password = password;
+        }
+
+        usersStore.updateUser(user.id, updateData);
         toast.success("Usuário atualizado com sucesso");
       } else {
         usersStore.addUser({
@@ -89,6 +100,8 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
           email,
           role,
           status: 'active', // Admin creates active users
+          accessLevel,
+          password: password
         });
         toast.success("Usuário criado com sucesso");
       }
@@ -130,47 +143,86 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Função</Label>
+              <Select
+                value={role}
+                onValueChange={(value) => setRole(value as "admin" | "user")}
+                disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma função" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={status}
+                onValueChange={(value) => setStatus(value as "active" | "pending" | "inactive")}
+                disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="role">Função</Label>
+            <Label htmlFor="accessLevel">Nível de Acesso</Label>
             <Select
-              value={role}
-              onValueChange={(value) => setRole(value as "admin" | "user")}
+              value={accessLevel}
+              onValueChange={(value) => setAccessLevel(value as "basic" | "full" | "limited")}
               disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma função" />
+                <SelectValue placeholder="Selecione um nível de acesso" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Usuário</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="limited">Limitado</SelectItem>
+                <SelectItem value="basic">Básico</SelectItem>
+                <SelectItem value="full">Completo</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {!isEditing && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
+          {/* Password field - shown always for new users, optional for editing */}
+          <div className="space-y-2">
+            <Label htmlFor="password">{isEditing ? "Nova Senha (opcional)" : "Senha"}</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              required={!isEditing}
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </>
+          {(password || !isEditing) && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                required={!isEditing || !!password}
+              />
+            </div>
           )}
         </CardContent>
         

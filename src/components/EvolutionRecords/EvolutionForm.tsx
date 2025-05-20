@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +9,101 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Check, X, AlertTriangle, Star } from "lucide-react";
+import { Check, X, AlertTriangle, ArrowRight, ArrowLeft, Star, Smile, Frown, Meh, Bed, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { residentsStore, Resident } from "@/lib/residentStore";
 import { EVOLUTION_CATEGORIES, evolutionsStore } from "@/lib/evolutionStore";
+import "./EvolutionForm.css";
+
+// Additional categories that might be relevant for nursing home evolution records
+const ADDITIONAL_CATEGORIES = [
+  {
+    id: "vitalSigns",
+    title: "Sinais Vitais",
+    fieldType: "text",
+    placeholder: "Temperatura, frequência cardíaca, etc."
+  },
+  {
+    id: "medication",
+    title: "Medicação",
+    fieldType: "text",
+    placeholder: "Liste os medicamentos administrados"
+  },
+  {
+    id: "wounds",
+    title: "Feridas/Lesões",
+    fieldType: "boolean"
+  },
+  {
+    id: "oxygenation",
+    title: "Oxigenação",
+    fieldType: "text",
+    placeholder: "Saturação de O2, uso de suporte"
+  },
+  {
+    id: "skinCondition",
+    title: "Condição da Pele",
+    fieldType: "option",
+    options: [
+      { id: "normal", value: "normal", label: "Normal", color: "bg-green-100", icon: "check" },
+      { id: "dry", value: "dry", label: "Seca", color: "bg-yellow-100", icon: "alert-triangle" },
+      { id: "redness", value: "redness", label: "Vermelhidão", color: "bg-red-100", icon: "x" }
+    ]
+  },
+  {
+    id: "respiratoryCondition",
+    title: "Condição Respiratória",
+    fieldType: "option",
+    options: [
+      { id: "normal", value: "normal", label: "Normal", color: "bg-green-100", icon: "check" },
+      { id: "wheezing", value: "wheezing", label: "Chiado", color: "bg-yellow-100", icon: "alert-triangle" },
+      { id: "shortness", value: "shortness", label: "Falta de ar", color: "bg-red-100", icon: "x" }
+    ]
+  }
+];
+
+// Combine original categories with additional ones
+const ALL_CATEGORIES = [...EVOLUTION_CATEGORIES, ...ADDITIONAL_CATEGORIES];
+
+// Group categories into logical steps
+const EVOLUTION_STEPS = [
+  {
+    id: "basic",
+    title: "Informações Básicas",
+    categories: ["bloodPressure", "vitalSigns", "medication"]
+  },
+  {
+    id: "nutrition",
+    title: "Alimentação e Hidratação",
+    categories: ["eating", "hydration"]
+  },
+  {
+    id: "physical",
+    title: "Condição Física",
+    categories: ["physiologicalNeeds", "physicalActivity", "mobility", "skinCondition", "wounds"]
+  },
+  {
+    id: "medical",
+    title: "Condições Médicas",
+    categories: ["pain", "medication", "oxygenation", "respiratoryCondition"]
+  },
+  {
+    id: "mental",
+    title: "Estado Mental e Emocional",
+    categories: ["mood", "cognitiveOrientation", "sleep", "emotionalState"]
+  },
+  {
+    id: "social",
+    title: "Aspectos Sociais",
+    categories: ["socialInteraction", "satisfactionLevel"]
+  },
+  {
+    id: "notes",
+    title: "Observações Adicionais",
+    categories: ["notes"]
+  }
+];
 
 interface EvolutionFormProps {
   onCancel: () => void;
@@ -32,11 +121,18 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     new Date().toTimeString().split(":").slice(0, 2).join(":")
   );
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [currentStep, setCurrentStep] = useState(0);
+  const [basicInfoComplete, setBasicInfoComplete] = useState(false);
 
   useEffect(() => {
     // Load residents
     setResidents(residentsStore.getResidents());
   }, []);
+
+  // Check if basic information is complete
+  useEffect(() => {
+    setBasicInfoComplete(!!selectedResidentId && !!date && !!time);
+  }, [selectedResidentId, date, time]);
 
   const handleInputChange = (categoryId: string, value: any) => {
     setFormData((prev) => ({
@@ -65,23 +161,15 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     });
   };
 
-  const validateForm = () => {
-    if (!selectedResidentId) {
-      toast.error("Selecione um residente");
+  const validateCurrentStep = () => {
+    // First step validation (basic info)
+    if (currentStep === 0 && !basicInfoComplete) {
+      toast.error("Preencha todas as informações básicas");
       return false;
     }
 
-    if (!date) {
-      toast.error("Informe a data");
-      return false;
-    }
-
-    if (!time) {
-      toast.error("Informe a hora");
-      return false;
-    }
-
-    if (!formData.bloodPressure) {
+    // For final step when submitting
+    if (currentStep === EVOLUTION_STEPS.length && !formData.bloodPressure) {
       toast.error("Informe a pressão arterial");
       return false;
     }
@@ -89,10 +177,24 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNextStep = () => {
+    if (!validateCurrentStep()) return;
+    
+    if (currentStep < EVOLUTION_STEPS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSubmit();
+    }
+  };
 
-    if (!validateForm()) return;
+  const handlePrevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!validateCurrentStep()) return;
     if (!currentUser) return;
 
     setLoading(true);
@@ -117,7 +219,16 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     }
   };
 
-  const renderField = (category: typeof EVOLUTION_CATEGORIES[0]) => {
+  const getIconForOption = (iconName: string) => {
+    switch (iconName) {
+      case "check": return <Check size={16} />;
+      case "x": return <X size={16} />;
+      case "alert-triangle": return <AlertTriangle size={16} />;
+      default: return null;
+    }
+  };
+
+  const renderField = (category: any) => {
     switch (category.fieldType) {
       case "text":
         return (
@@ -125,7 +236,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
             value={formData[category.id] || ""}
             onChange={(e) => handleInputChange(category.id, e.target.value)}
             disabled={loading}
-            placeholder={`Informe ${category.title.toLowerCase()}`}
+            placeholder={category.placeholder || `Informe ${category.title.toLowerCase()}`}
             className="min-h-[80px]"
           />
         );
@@ -137,7 +248,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
             value={formData[category.id] || ""}
             onChange={(e) => handleInputChange(category.id, e.target.value)}
             disabled={loading}
-            placeholder={`Informe ${category.title.toLowerCase()}`}
+            placeholder={category.placeholder || `Informe ${category.title.toLowerCase()}`}
           />
         );
 
@@ -157,13 +268,13 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
 
       case "rating":
         return (
-          <div className="flex space-x-4">
+          <div className="flex space-x-2">
             {[1, 2, 3, 4, 5].map((rating) => (
               <button
                 key={rating}
                 type="button"
                 onClick={() => handleInputChange(category.id, rating)}
-                className={`p-2 ${
+                className={`p-1 ${
                   formData[category.id] === rating
                     ? "text-custom-brown"
                     : "text-gray-300"
@@ -176,7 +287,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
                     .map((_, i) => (
                       <Star
                         key={i}
-                        size={20}
+                        size={16}
                         fill={
                           formData[category.id] === rating
                             ? "#A78C5D"
@@ -192,30 +303,11 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
 
       case "option":
         return category.options ? (
-          <div
-            className={`grid grid-cols-${
-              category.options.length <= 3 ? category.options.length : 3
-            } gap-2`}
-          >
-            {category.options.map((option) => {
+          <div className="flex flex-wrap gap-2">
+            {category.options.map((option: any) => {
               const isSelected = category.allowMultiple
                 ? (formData[category.id] || []).includes(option.value)
                 : formData[category.id] === option.value;
-
-              let Icon;
-              switch (option.icon) {
-                case "check":
-                  Icon = Check;
-                  break;
-                case "x":
-                  Icon = X;
-                  break;
-                case "alert-triangle":
-                  Icon = AlertTriangle;
-                  break;
-                default:
-                  Icon = null;
-              }
 
               return (
                 <button
@@ -227,12 +319,12 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
                       : handleInputChange(category.id, option.value)
                   }
                   className={`evolution-option ${option.color || "bg-gray-100"} ${
-                    isSelected ? "selected-option" : ""
-                  }`}
+                    isSelected ? "selected-option border-2 border-custom-blue" : ""
+                  } p-2 rounded-md flex items-center gap-2 text-sm`}
                   disabled={loading}
                 >
-                  {Icon && <Icon size={24} />}
-                  <span className="text-sm">{option.label}</span>
+                  {getIconForOption(option.icon)}
+                  <span>{option.label}</span>
                 </button>
               );
             })}
@@ -244,85 +336,143 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     }
   };
 
+  // Get all categories for the current step
+  const getCurrentStepCategories = () => {
+    if (currentStep >= EVOLUTION_STEPS.length) return [];
+    
+    const step = EVOLUTION_STEPS[currentStep];
+    return step.categories.map(categoryId => 
+      ALL_CATEGORIES.find(cat => cat.id === categoryId)
+    ).filter(Boolean);
+  };
+
+  // Initial step with resident selection and date/time
+  const renderBasicInfoStep = () => {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="resident">Residente *</Label>
+            <Select
+              value={selectedResidentId}
+              onValueChange={setSelectedResidentId}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um residente" />
+              </SelectTrigger>
+              <SelectContent>
+                {residents.map((resident) => (
+                  <SelectItem key={resident.id} value={resident.id}>
+                    {resident.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Data *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="time">Hora *</Label>
+            <Input
+              id="time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Registrar Evolução</CardTitle>
+        <CardTitle>
+          Registrar Evolução - {currentStep < EVOLUTION_STEPS.length
+            ? EVOLUTION_STEPS[currentStep].title
+            : "Revisão Final"
+          }
+        </CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="resident">Residente *</Label>
-              <Select
-                value={selectedResidentId}
-                onValueChange={setSelectedResidentId}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um residente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {residents.map((resident) => (
-                    <SelectItem key={resident.id} value={resident.id}>
-                      {resident.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {currentStep === 0 ? (
+            renderBasicInfoStep()
+          ) : (
+            <div className="space-y-8">
+              {getCurrentStepCategories().map((category: any) => (
+                <div key={category.id} className="space-y-2">
+                  <Label>{category.title}</Label>
+                  {renderField(category)}
+                </div>
+              ))}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="time">Hora *</Label>
-              <Input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </div>
+          )}
           
-          <Separator />
-
-          <div className="space-y-8">
-            {EVOLUTION_CATEGORIES.map((category) => (
-              <div key={category.id} className="space-y-2">
-                <Label>{category.title}</Label>
-                {renderField(category)}
-              </div>
-            ))}
+          {/* Progress indicator */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-6">
+            <div 
+              className="bg-custom-blue h-2 rounded-full transition-all" 
+              style={{ width: `${(currentStep / EVOLUTION_STEPS.length) * 100}%` }} 
+            />
           </div>
         </CardContent>
         
         <CardFooter className="flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            className="bg-custom-blue hover:bg-custom-blue/90"
-            disabled={loading}
-          >
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
+          <div>
+            {currentStep > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevStep}
+                disabled={loading}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleNextStep}
+              className="bg-custom-blue hover:bg-custom-blue/90"
+              disabled={loading || (currentStep === 0 && !basicInfoComplete)}
+            >
+              {loading ? (
+                "Processando..."
+              ) : currentStep < EVOLUTION_STEPS.length - 1 ? (
+                <>
+                  Próximo
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              ) : (
+                "Finalizar"
+              )}
+            </Button>
+          </div>
         </CardFooter>
       </form>
     </Card>

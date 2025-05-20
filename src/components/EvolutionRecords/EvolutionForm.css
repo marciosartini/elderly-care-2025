@@ -1,0 +1,27 @@
+
+.evolution-option {
+  @apply px-3 py-2 rounded-md flex items-center gap-2 transition-all;
+  max-width: 130px;
+  min-width: 100px;
+  font-size: 0.85rem;
+}
+
+.selected-option {
+  @apply border-2 border-custom-blue font-medium;
+}
+
+.step-indicator {
+  @apply flex items-center justify-center rounded-full w-8 h-8 text-sm font-medium transition-colors;
+}
+
+.step-active {
+  @apply bg-custom-blue text-white;
+}
+
+.step-complete {
+  @apply bg-custom-green text-white;
+}
+
+.step-incomplete {
+  @apply bg-gray-200 text-gray-600;
+}

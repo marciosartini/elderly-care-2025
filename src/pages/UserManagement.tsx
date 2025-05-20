@@ -1,16 +1,27 @@
 
-import { useState } from "react";
-import { useAuth, User } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { useAuth, User, usersStore } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import UserList from "@/components/UserManagement/UserList";
 import UserForm from "@/components/UserManagement/UserForm";
 import { PlusCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const UserManagement = () => {
   const { isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    // Load users on mount and refresh
+    loadUsers();
+  }, []);
+
+  const loadUsers = () => {
+    setUsers(usersStore.getUsers());
+  };
 
   const handleAddClick = () => {
     setSelectedUser(undefined);
@@ -30,6 +41,8 @@ const UserManagement = () => {
   const handleFormSuccess = () => {
     setShowForm(false);
     setSelectedUser(undefined);
+    loadUsers(); // Refresh user list
+    toast.success(selectedUser ? "Usuário atualizado" : "Usuário criado");
   };
 
   // Only admins can access this page
