@@ -52,12 +52,12 @@ export const ADDITIONAL_CATEGORIES = [
 // Combine original categories with additional ones
 export const ALL_CATEGORIES = [...EVOLUTION_CATEGORIES, ...ADDITIONAL_CATEGORIES];
 
-// Group categories into logical steps
+// Group categories into logical steps - removed bloodPressure from the basic step
 export const EVOLUTION_STEPS = [
   {
     id: "basic",
     title: "Informações Básicas",
-    categories: ["bloodPressure"]
+    categories: [] // Removed bloodPressure since it's redundant with the systolic/diastolic fields
   },
   {
     id: "nutrition",
