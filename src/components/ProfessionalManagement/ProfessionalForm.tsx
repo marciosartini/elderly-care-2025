@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,7 +25,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { toast } from "sonner";
 import { Professional, professionalsStore } from "@/lib/professionalStore";
 import { Profession, professionsStore } from "@/lib/professionStore";
-import { PlusCircle, Trash, Clock } from "lucide-react";
+import { PlusCircle, Trash, Clock, Upload, Image } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface ProfessionalFormProps {
   professional?: Professional;
@@ -36,6 +37,8 @@ interface ProfessionalFormProps {
 const ProfessionalForm = ({ professional, onCancel, onSuccess }: ProfessionalFormProps) => {
   const editing = !!professional;
   const [professions, setProfessions] = useState<Profession[]>([]);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(professional?.photo || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [schedules, setSchedules] = useState<Array<{
     dayOfWeek: string;
     startTime: string;
@@ -82,6 +85,35 @@ const ProfessionalForm = ({ professional, onCancel, onSuccess }: ProfessionalFor
     },
   });
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
+      return;
+    }
+    
+    // Check file type (allow only images)
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione apenas arquivos de imagem");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      setPhotoPreview(imageUrl);
+      form.setValue("photo", imageUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
   const addSchedule = () => {
     setSchedules([
       ...schedules,
@@ -122,7 +154,7 @@ const ProfessionalForm = ({ professional, onCancel, onSuccess }: ProfessionalFor
       // Prepare professional data
       const professionalData = {
         name: values.name,
-        photo: values.photo || "/placeholder.svg",
+        photo: photoPreview || "/placeholder.svg",
         professionId: values.professionId,
         experience: values.experience,
         contact: {
@@ -190,10 +222,36 @@ const ProfessionalForm = ({ professional, onCancel, onSuccess }: ProfessionalFor
                   name="photo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Foto (URL)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="URL da foto" {...field} />
-                      </FormControl>
+                      <FormLabel>Foto do Profissional</FormLabel>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="w-16 h-16 border">
+                            <AvatarImage src={photoPreview || "/placeholder.svg"} alt="Foto do profissional" />
+                            <AvatarFallback>
+                              <Image className="w-6 h-6 text-gray-400" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={triggerFileUpload}
+                            className="flex gap-2 items-center"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Selecionar Imagem
+                          </Button>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                            ref={fileInputRef}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Formatos aceitos: JPG, PNG. Tamanho máximo: 5MB
+                        </p>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

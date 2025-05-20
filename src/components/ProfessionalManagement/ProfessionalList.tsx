@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Edit, Trash, User } from "lucide-react";
+import { Edit, Trash, User, Printer } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { printProfessionalSchedule } from "@/lib/printUtils";
 
 interface ProfessionalListProps {
   onEdit: (professional: Professional) => void;
@@ -69,6 +77,11 @@ const ProfessionalList = ({ onEdit }: ProfessionalListProps) => {
     setProfessionalToDelete(null);
   };
 
+  const handlePrintSchedule = (professional: Professional) => {
+    const professionName = professionsMap.get(professional.professionId)?.name || "Não especificada";
+    printProfessionalSchedule(professional, professionName);
+  };
+
   return (
     <Card className="border-custom-gray/20">
       <div className="p-6">
@@ -84,7 +97,7 @@ const ProfessionalList = ({ onEdit }: ProfessionalListProps) => {
                 <TableHead>Profissão</TableHead>
                 <TableHead className="hidden md:table-cell">Especialidade</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
+                <TableHead className="w-[130px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,15 +105,15 @@ const ProfessionalList = ({ onEdit }: ProfessionalListProps) => {
                 <TableRow key={professional.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      {professional.photo ? (
-                        <img 
+                      <Avatar className="w-8 h-8 border">
+                        <AvatarImage 
                           src={professional.photo} 
                           alt={professional.name}
-                          className="w-8 h-8 rounded-full object-cover" 
                         />
-                      ) : (
-                        <User className="w-8 h-8 p-1 bg-gray-100 rounded-full" />
-                      )}
+                        <AvatarFallback>
+                          <User className="w-4 h-4 text-gray-400" />
+                        </AvatarFallback>
+                      </Avatar>
                       {professional.name}
                     </div>
                   </TableCell>
@@ -115,23 +128,59 @@ const ProfessionalList = ({ onEdit }: ProfessionalListProps) => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(professional)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePrintSchedule(professional)}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Imprimir Rotina</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onEdit(professional)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
                       <AlertDialog open={professionalToDelete === professional.id} onOpenChange={() => setProfessionalToDelete(null)}>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(professional.id)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(professional.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Excluir</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
