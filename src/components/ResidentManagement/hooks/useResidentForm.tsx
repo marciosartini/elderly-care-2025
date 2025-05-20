@@ -89,7 +89,7 @@ export const useResidentForm = ({ resident, onSuccess }: UseResidentFormProps) =
   };
 
   const handleEditContact = (contact: Contact) => {
-    setEditingContact(contact);
+    setEditingContact({...contact});
     setShowContactForm(true);
   };
 
@@ -104,6 +104,7 @@ export const useResidentForm = ({ resident, onSuccess }: UseResidentFormProps) =
       setContacts(
         contacts.map((c) => (c.id === contact.id ? contact : c))
       );
+      toast.success("Contato atualizado com sucesso");
     } else {
       // Add new contact with generated ID
       const newContact = {
@@ -111,6 +112,7 @@ export const useResidentForm = ({ resident, onSuccess }: UseResidentFormProps) =
         id: `temp-${Date.now()}`, // Temporary ID that will be replaced when saving the resident
       };
       setContacts([...contacts, newContact]);
+      toast.success("Contato adicionado com sucesso");
     }
     setShowContactForm(false);
     setEditingContact(null);

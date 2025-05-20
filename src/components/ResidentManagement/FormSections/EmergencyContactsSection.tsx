@@ -41,11 +41,13 @@ const EmergencyContactsSection = ({
       </div>
 
       {showContactForm ? (
-        <ContactForm 
-          contact={editingContact || undefined} 
-          onSave={onContactSave} 
-          onCancel={onContactCancel} 
-        />
+        <div className="mb-6">
+          <ContactForm 
+            contact={editingContact || undefined} 
+            onSave={onContactSave} 
+            onCancel={onContactCancel} 
+          />
+        </div>
       ) : (
         <ContactsList 
           contacts={contacts} 
