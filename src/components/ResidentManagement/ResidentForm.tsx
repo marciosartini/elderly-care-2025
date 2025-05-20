@@ -1,12 +1,22 @@
-import { useState, useEffect } from "react";
+
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Resident, Contact, residentsStore } from "@/lib/residentStore";
 import { toast } from "sonner";
-import { Resident, residentsStore } from "@/lib/residentStore";
+import ContactForm from "./ContactForm";
 import ContactsList from "./ContactsList";
 
 interface ResidentFormProps {
@@ -16,419 +26,362 @@ interface ResidentFormProps {
 }
 
 const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
-  const [activeTab, setActiveTab] = useState("personal");
-  const [loading, setLoading] = useState(false);
-  const isEditing = !!resident;
+  // Check if we're editing an existing resident
+  const editing = !!resident;
   
-  // Form state
-  const [name, setName] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [admissionDate, setAdmissionDate] = useState(
-    new Date().toISOString().split('T')[0]
+  // State to manage contacts
+  const [contacts, setContacts] = useState<Contact[]>(
+    resident ? [...resident.contacts] : []
   );
-  const [contacts, setContacts] = useState<Resident['contacts']>([]);
-  const [residentId, setResidentId] = useState<string>("");
+  
+  // State to show/hide contact form
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
-  useEffect(() => {
-    if (resident) {
-      setName(resident.name);
-      setCpf(resident.cpf);
-      setBirthDate(resident.birthDate);
-      setGender(resident.gender);
-      setAddress(resident.address);
-      setCity(resident.city);
-      setState(resident.state);
-      setZipCode(resident.zipCode);
-      setPhone(resident.phone);
-      setEmail(resident.email);
-      setAdmissionDate(resident.admissionDate);
-      setContacts(resident.contacts || []);
-      setResidentId(resident.id);
-    }
-  }, [resident]);
+  // Form schema
+  const formSchema = z.object({
+    name: z.string().min(1, "Nome é obrigatório"),
+    cpf: z.string().min(11, "CPF inválido"),
+    birthDate: z.string().min(1, "Data de nascimento é obrigatória"),
+    gender: z.string().min(1, "Gênero é obrigatório"),
+    address: z.string().min(1, "Endereço é obrigatório"),
+    city: z.string().min(1, "Cidade é obrigatória"),
+    state: z.string().min(1, "Estado é obrigatório"),
+    zipCode: z.string().min(1, "CEP é obrigatório"),
+    phone: z.string().min(1, "Telefone é obrigatório"),
+    email: z.string().email("E-mail inválido"),
+    admissionDate: z.string().min(1, "Data de admissão é obrigatória"),
+  });
 
-  const validatePersonalInfo = () => {
-    if (!name.trim()) {
-      toast.error("Nome é obrigatório");
-      return false;
-    }
+  // Initialize form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: resident?.name || "",
+      cpf: resident?.cpf || "",
+      birthDate: resident?.birthDate || "",
+      gender: resident?.gender || "",
+      address: resident?.address || "",
+      city: resident?.city || "",
+      state: resident?.state || "",
+      zipCode: resident?.zipCode || "",
+      phone: resident?.phone || "",
+      email: resident?.email || "",
+      admissionDate: resident?.admissionDate || "",
+    },
+  });
 
-    if (!cpf.trim()) {
-      toast.error("CPF é obrigatório");
-      return false;
-    }
-
-    if (!birthDate) {
-      toast.error("Data de nascimento é obrigatória");
-      return false;
-    }
-
-    return true;
-  };
-
-  const validateContactInfo = () => {
-    if (!address.trim()) {
-      toast.error("Endereço é obrigatório");
-      return false;
-    }
-
-    if (!city.trim()) {
-      toast.error("Cidade é obrigatória");
-      return false;
-    }
-
-    if (!state.trim()) {
-      toast.error("Estado é obrigatório");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validatePersonalInfo() || !validateContactInfo()) {
-      return;
-    }
-
-    setLoading(true);
-
-    const residentData = {
-      name,
-      cpf,
-      birthDate,
-      gender,
-      address,
-      city,
-      state,
-      zipCode,
-      phone,
-      email,
-      admissionDate,
-      contacts,
-    };
-
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     try {
-      if (isEditing && resident) {
-        residentsStore.updateResident(resident.id, residentData);
-        toast.success("Residente atualizado com sucesso");
+      if (editing && resident) {
+        // Update existing resident
+        residentsStore.updateResident(resident.id, {
+          ...values,
+          contacts,
+        });
+        toast.success("Residente atualizado com sucesso!");
       } else {
-        const newResident = residentsStore.addResident(residentData);
-        setResidentId(newResident.id);
-        toast.success("Residente cadastrado com sucesso");
-        setActiveTab("contacts"); // Switch to contacts tab for a new resident
+        // Add new resident
+        residentsStore.addResident({
+          ...values,
+          contacts,
+        });
+        toast.success("Residente cadastrado com sucesso!");
       }
-      
-      if (!isEditing) {
-        // If new resident, keep the form open to add contacts
-        setIsEditing(true);
-      } else {
-        onSuccess();
-      }
+      onSuccess();
     } catch (error) {
-      console.error("Error saving resident:", error);
       toast.error("Erro ao salvar residente");
-    } finally {
-      setLoading(false);
+      console.error(error);
     }
   };
 
-  // Keep track if we've saved the initial form
-  const [isEditing, setIsEditing] = useState(!!resident);
+  // Handle contact operations
+  const handleAddContact = () => {
+    setEditingContact(null);
+    setShowContactForm(true);
+  };
 
-  const formatCPF = (value: string) => {
-    // Remove non-digits
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as CPF
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    } else if (digits.length <= 9) {
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setShowContactForm(true);
+  };
+
+  const handleDeleteContact = (contactId: string) => {
+    setContacts(contacts.filter((c) => c.id !== contactId));
+    toast.success("Contato removido");
+  };
+
+  const handleContactSave = (contact: Contact) => {
+    if (editingContact) {
+      // Update existing contact
+      setContacts(
+        contacts.map((c) => (c.id === contact.id ? contact : c))
+      );
     } else {
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+      // Add new contact with generated ID
+      const newContact = {
+        ...contact,
+        id: `temp-${Date.now()}`, // Temporary ID that will be replaced when saving the resident
+      };
+      setContacts([...contacts, newContact]);
     }
+    setShowContactForm(false);
+    setEditingContact(null);
   };
 
-  const formatPhone = (value: string) => {
-    // Remove non-digits
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as phone number
-    if (digits.length <= 2) {
-      return `(${digits}`;
-    } else if (digits.length <= 6) {
-      return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    } else {
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
-    }
-  };
-
-  // Reload contacts
-  const handleContactsChange = () => {
-    if (isEditing && residentId) {
-      const updatedResident = residentsStore.getResidentById(residentId);
-      if (updatedResident) {
-        setContacts(updatedResident.contacts);
-      }
-    }
+  const handleContactCancel = () => {
+    setShowContactForm(false);
+    setEditingContact(null);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEditing ? "Editar Residente" : "Novo Residente"}</CardTitle>
-      </CardHeader>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="px-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
-            <TabsTrigger value="contact">Endereço e Contato</TabsTrigger>
-            <TabsTrigger value="contacts" disabled={!isEditing}>
-              Lista de Contatos
-            </TabsTrigger>
-          </TabsList>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold text-custom-blue">
+          {editing ? "Editar Residente" : "Novo Residente"}
+        </h2>
+        <p className="text-muted-foreground">
+          {editing
+            ? "Atualize os dados do residente"
+            : "Preencha os dados para cadastrar um novo residente"}
+        </p>
+      </div>
 
-        <CardContent className="pt-6">
-          <TabsContent value="personal">
-            <form onSubmit={(e) => { e.preventDefault(); setActiveTab("contact"); }} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo *</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={loading}
-                    required
+      <Card className="border-custom-gray/20">
+        <CardHeader>
+          <CardTitle className="text-xl text-custom-blue">
+            Dados Pessoais
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Personal Information Fields */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Completo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do residente" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF</FormLabel>
+                      <FormControl>
+                        <Input placeholder="000.000.000-00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Nascimento</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gênero</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Gênero" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="admissionDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Admissão</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="border-t pt-4 border-gray-200">
+                <h3 className="text-lg font-medium mb-2">
+                  Informações de Contato
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Contact Information Fields */}
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="email@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF *</Label>
-                  <Input
-                    id="cpf"
-                    value={cpf}
-                    onChange={(e) => setCpf(formatCPF(e.target.value))}
-                    disabled={loading}
-                    maxLength={14}
-                    required
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="(00) 00000-0000"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Data de Nascimento *</Label>
-                  <Input
-                    id="birthDate"
-                    type="date"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    disabled={loading}
-                    required
+              <div className="border-t pt-4 border-gray-200">
+                <h3 className="text-lg font-medium mb-2">Endereço</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Address Fields */}
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Endereço</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Rua, número, complemento" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gênero</Label>
-                  <Select value={gender} onValueChange={setGender} disabled={loading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Masculino">Masculino</SelectItem>
-                      <SelectItem value="Feminino">Feminino</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Cidade" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Estado" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <FormControl>
+                          <Input placeholder="00000-000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admissionDate">Data de Admissão *</Label>
-                  <Input
-                    id="admissionDate"
-                    type="date"
-                    value={admissionDate}
-                    onChange={(e) => setAdmissionDate(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
+              <div className="border-t pt-4 border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">Contatos de Emergência</h3>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleAddContact}
+                    disabled={showContactForm}
+                  >
+                    Adicionar Contato
+                  </Button>
                 </div>
+
+                {showContactForm ? (
+                  <ContactForm 
+                    contact={editingContact || undefined} 
+                    onSave={handleContactSave} 
+                    onCancel={handleContactCancel} 
+                  />
+                ) : (
+                  <ContactsList 
+                    contacts={contacts} 
+                    onEdit={handleEditContact} 
+                    onDelete={handleDeleteContact} 
+                  />
+                )}
               </div>
 
-              <div className="flex justify-between pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
+              <CardFooter className="flex justify-between border-t pt-5 px-0">
+                <Button 
+                  type="button" 
+                  variant="outline" 
                   onClick={onCancel}
-                  disabled={loading}
                 >
                   Cancelar
                 </Button>
                 <Button 
-                  type="submit"
+                  type="submit" 
                   className="bg-custom-blue hover:bg-custom-blue/90"
                 >
-                  Próximo
+                  {editing ? "Atualizar" : "Cadastrar"}
                 </Button>
-              </div>
+              </CardFooter>
             </form>
-          </TabsContent>
-
-          <TabsContent value="contact">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço *</Label>
-                  <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">Cidade *</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="state">Estado *</Label>
-                  <Input
-                    id="state"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode">CEP</Label>
-                  <Input
-                    id="zipCode"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(formatPhone(e.target.value))}
-                    disabled={loading}
-                    maxLength={15}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between pt-2">
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={() => setActiveTab("personal")}
-                >
-                  Anterior
-                </Button>
-                
-                <div className="space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                    disabled={loading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-custom-blue hover:bg-custom-blue/90"
-                    disabled={loading}
-                  >
-                    {isEditing ? "Salvar" : "Salvar e Continuar"}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="contacts">
-            {residentId ? (
-              <div className="space-y-6">
-                <ContactsList 
-                  residentId={residentId} 
-                  contacts={contacts}
-                  onContactsChange={handleContactsChange}
-                />
-                
-                <div className="flex justify-between pt-2">
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("contact")}
-                  >
-                    Anterior
-                  </Button>
-                  
-                  <Button
-                    type="button"
-                    className="bg-custom-blue hover:bg-custom-blue/90"
-                    onClick={onSuccess}
-                  >
-                    Concluir
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p>Salve os dados do residente primeiro para adicionar contatos.</p>
-              </div>
-            )}
-          </TabsContent>
+          </Form>
         </CardContent>
-      </Tabs>
-    </Card>
+      </Card>
+    </div>
   );
 };
 

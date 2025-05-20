@@ -13,6 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import ResidentManagement from "./pages/ResidentManagement";
 import EvolutionRecords from "./pages/EvolutionRecords";
+import ProfessionManagement from "./pages/ProfessionManagement";
+import ProfessionalManagement from "./pages/ProfessionalManagement";
 import MainLayout from "./components/Layout/MainLayout";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/users" element={<UserManagement />} />
               <Route path="/residents" element={<ResidentManagement />} />
               <Route path="/evolutions" element={<EvolutionRecords />} />
+              <Route path="/professions" element={<ProfessionManagement />} />
+              <Route path="/professionals" element={<ProfessionalManagement />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

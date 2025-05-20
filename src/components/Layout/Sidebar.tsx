@@ -8,7 +8,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-import { ChevronRight, Home, Users, User, Activity } from "lucide-react";
+import { ChevronRight, Home, Users, User, Activity, Briefcase } from "lucide-react";
 
 const AppSidebar = () => {
   const { isAdmin } = useAuth();
@@ -29,6 +29,12 @@ const AppSidebar = () => {
       active: location.pathname === "/residents",
     },
     {
+      title: "Profissionais",
+      icon: Briefcase,
+      path: "/professionals",
+      active: location.pathname === "/professionals",
+    },
+    {
       title: "Evoluções",
       icon: Activity,
       path: "/evolutions",
@@ -36,13 +42,20 @@ const AppSidebar = () => {
     },
   ];
 
-  // Add user management for admins
+  // Add admin-only items
   if (isAdmin()) {
     menuItems.push({
       title: "Usuários",
       icon: User,
       path: "/users",
       active: location.pathname === "/users",
+    });
+    
+    menuItems.push({
+      title: "Profissões",
+      icon: Briefcase,
+      path: "/professions",
+      active: location.pathname === "/professions",
     });
   }
 
