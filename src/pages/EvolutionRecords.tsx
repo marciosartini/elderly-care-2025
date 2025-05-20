@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, Star } from "lucide-react";
+import { PlusCircle, Star, HeartPulse, Droplet, Activity, Brain, Users } from "lucide-react";
 import { EVOLUTION_CATEGORIES, EvolutionEntry, evolutionsStore } from "@/lib/evolutionStore";
 import { residentsStore } from "@/lib/residentStore";
 import EvolutionList from "@/components/EvolutionRecords/EvolutionList";
@@ -42,13 +42,47 @@ const EvolutionRecords = () => {
     return category?.title || categoryId;
   };
 
+  // Função para renderizar os ícones de categoria
+  const getCategoryIcon = (categoryId: string) => {
+    switch (categoryId) {
+      case "bloodPressure":
+        return <HeartPulse className="text-red-500 animate-pulse" size={20} />;
+      case "hydration":
+        return <Droplet className="text-blue-500 animate-pulse" size={20} />;
+      case "feeding":
+      case "eating":
+        return <Activity className="text-amber-500 animate-pulse" size={20} />;
+      case "cognitiveOrientation":
+      case "mood":
+      case "emotionalState":
+        return <Brain className="text-purple-500 animate-pulse" size={20} />;
+      case "socialInteraction":
+        return <Users className="text-green-500 animate-pulse" size={20} />;
+      case "satisfactionLevel":
+        return <Star className="text-custom-brown animate-pulse" size={20} />;
+      default:
+        return null;
+    }
+  };
+
   const renderEvolutionData = (categoryId: string, value: any) => {
     const category = EVOLUTION_CATEGORIES.find((cat) => cat.id === categoryId);
     if (!category) return String(value);
 
     switch (category.fieldType) {
       case "boolean":
-        return value ? "Sim" : "Não";
+        return (
+          <div className="flex items-center">
+            {value ? 
+              <span className="flex items-center text-green-600">
+                <Star className="mr-1 animate-pulse" size={16} fill="#16a34a" /> Sim
+              </span> : 
+              <span className="flex items-center text-red-600">
+                <Star className="mr-1" size={16} /> Não
+              </span>
+            }
+          </div>
+        );
       
       case "rating":
         return (
@@ -56,16 +90,28 @@ const EvolutionRecords = () => {
             {Array(value)
               .fill(0)
               .map((_, i) => (
-                <Star key={i} className="text-custom-brown" size={16} fill="#A78C5D" />
+                <Star key={i} className="text-custom-brown animate-pulse" size={16} fill="#A78C5D" />
               ))}
           </div>
         );
       
       case "option":
         if (Array.isArray(value)) {
-          return value.join(", ");
+          return (
+            <div className="flex flex-wrap gap-1">
+              {value.map((v, i) => (
+                <span key={i} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+                  {v}
+                </span>
+              ))}
+            </div>
+          );
         }
-        return value;
+        return (
+          <span className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+            {value}
+          </span>
+        );
       
       default:
         return String(value);
@@ -138,8 +184,11 @@ const EvolutionRecords = () => {
               <div className="space-y-6">
                 {Object.entries(viewingEvolution.data).map(([key, value]) => (
                   <div key={key} className="space-y-1">
-                    <Label className="text-muted-foreground">{getCategoryTitle(key)}</Label>
-                    <div>{renderEvolutionData(key, value)}</div>
+                    <Label className="text-muted-foreground flex items-center">
+                      {getCategoryIcon(key)}
+                      <span className="ml-2">{getCategoryTitle(key)}</span>
+                    </Label>
+                    <div className="animate-fade-in">{renderEvolutionData(key, value)}</div>
                   </div>
                 ))}
               </div>

@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { FileText, Download, Trash2, Eye, Filter } from "lucide-react";
 import { residentsStore, Resident } from "@/lib/residentStore";
 import { EvolutionEntry, evolutionsStore } from "@/lib/evolutionStore";
 
@@ -98,12 +99,20 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
     return resident?.name || "Residente não encontrado";
   };
 
+  const handleExportPDF = () => {
+    // Em um app real, implementaria a exportação para PDF
+    toast.info("Exportação de relatório em PDF iniciada...");
+    setTimeout(() => {
+      toast.success("Relatório em PDF gerado com sucesso!");
+    }, 1500);
+  };
+
   return (
     <div className="space-y-4">
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="space-y-2">
+          <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
+            <div className="space-y-2 flex-1">
               <Label htmlFor="residentFilter">Filtrar por Residente</Label>
               <Select
                 value={selectedResidentId}
@@ -113,7 +122,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
                   <SelectValue placeholder="Todos os residentes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os residentes</SelectItem>
+                  <SelectItem value="">Todos os residentes</SelectItem>
                   {residents.map((resident) => (
                     <SelectItem key={resident.id} value={resident.id}>
                       {resident.name}
@@ -123,7 +132,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1">
               <Label htmlFor="dateFilter">Filtrar por Data</Label>
               <div className="flex space-x-2">
                 <Input
@@ -143,6 +152,29 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
                 )}
               </div>
             </div>
+
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleExportPDF}
+            >
+              <FileText className="h-4 w-4" />
+              <Download className="h-4 w-4" />
+              Exportar Relatório
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <Filter className="h-4 w-4" />
+            {selectedResidentId || dateFilter ? (
+              <span>
+                Filtros ativos: 
+                {selectedResidentId && ` Residente: ${getResidentName(selectedResidentId)}`}
+                {dateFilter && ` Data: ${new Date(dateFilter).toLocaleDateString("pt-BR")}`}
+              </span>
+            ) : (
+              <span>Sem filtros ativos</span>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -168,7 +200,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
               </TableRow>
             ) : (
               evolutions.map((evolution) => (
-                <TableRow key={evolution.id}>
+                <TableRow key={evolution.id} className="hover:bg-gray-50 transition-colors">
                   <TableCell>
                     {new Date(evolution.date).toLocaleDateString("pt-BR")}
                   </TableCell>
@@ -179,17 +211,19 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="border-custom-blue text-custom-blue"
+                      className="border-custom-blue text-custom-blue hover:bg-custom-blue hover:text-white transition-colors"
                       onClick={() => onView(evolution)}
                     >
+                      <Eye className="mr-1 h-4 w-4" /> 
                       Visualizar
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+                      className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition-colors"
                       onClick={() => handleDeleteEvolution(evolution.id)}
                     >
+                      <Trash2 className="mr-1 h-4 w-4" />
                       Excluir
                     </Button>
                   </TableCell>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Check, X, AlertTriangle, ArrowRight, ArrowLeft, Star, Smile, Frown, Meh, Bed, User } from "lucide-react";
+import { Check, X, AlertTriangle, ArrowRight, ArrowLeft, Star, Smile, Frown, Meh, Bed, User, HeartPulse, Droplet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { residentsStore, Resident } from "@/lib/residentStore";
@@ -71,7 +72,7 @@ const EVOLUTION_STEPS = [
   {
     id: "basic",
     title: "Informações Básicas",
-    categories: ["bloodPressure", "vitalSigns", "medication"]
+    categories: ["bloodPressure"]
   },
   {
     id: "nutrition",
@@ -123,6 +124,10 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [basicInfoComplete, setBasicInfoComplete] = useState(false);
+  
+  // Campos específicos para pressão arterial
+  const [systolic, setSystolic] = useState<string>("");
+  const [diastolic, setDiastolic] = useState<string>("");
 
   useEffect(() => {
     // Load residents
@@ -133,6 +138,16 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
   useEffect(() => {
     setBasicInfoComplete(!!selectedResidentId && !!date && !!time);
   }, [selectedResidentId, date, time]);
+
+  // Atualiza o formData com os valores da pressão arterial combinados
+  useEffect(() => {
+    if (systolic && diastolic) {
+      setFormData(prev => ({
+        ...prev,
+        bloodPressure: `${systolic}/${diastolic} mmHg`
+      }));
+    }
+  }, [systolic, diastolic]);
 
   const handleInputChange = (categoryId: string, value: any) => {
     setFormData((prev) => ({
@@ -168,10 +183,22 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
       return false;
     }
 
-    // For final step when submitting
-    if (currentStep === EVOLUTION_STEPS.length && !formData.bloodPressure) {
-      toast.error("Informe a pressão arterial");
-      return false;
+    // For blood pressure validation
+    if (currentStep === 0) {
+      if (!systolic || !diastolic) {
+        toast.error("Informe a pressão arterial completa (sistólica e diastólica)");
+        return false;
+      }
+      
+      const systolicNum = parseInt(systolic);
+      const diastolicNum = parseInt(diastolic);
+      
+      if (isNaN(systolicNum) || isNaN(diastolicNum) || 
+          systolicNum < 70 || systolicNum > 250 || 
+          diastolicNum < 40 || diastolicNum > 150) {
+        toast.error("Valores de pressão arterial inválidos");
+        return false;
+      }
     }
 
     return true;
@@ -221,14 +248,52 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
 
   const getIconForOption = (iconName: string) => {
     switch (iconName) {
-      case "check": return <Check size={16} />;
-      case "x": return <X size={16} />;
-      case "alert-triangle": return <AlertTriangle size={16} />;
+      case "check": return <Check size={16} className="animate-pulse text-green-600" />;
+      case "x": return <X size={16} className="animate-bounce text-red-600" />;
+      case "alert-triangle": return <AlertTriangle size={16} className="animate-pulse text-amber-600" />;
       default: return null;
     }
   };
 
   const renderField = (category: any) => {
+    // Campo especial para pressão arterial
+    if (category.id === "bloodPressure") {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="systolic">Pressão Arterial Sistólica (mmHg)</Label>
+            <div className="flex items-center">
+              <HeartPulse className="mr-2 h-5 w-5 text-red-500 animate-pulse" />
+              <Input
+                id="systolic"
+                type="number"
+                value={systolic}
+                onChange={(e) => setSystolic(e.target.value)}
+                disabled={loading}
+                placeholder="Ex: 120"
+                className="max-w-[120px]"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="diastolic">Pressão Arterial Diastólica (mmHg)</Label>
+            <div className="flex items-center">
+              <HeartPulse className="mr-2 h-5 w-5 text-blue-500 animate-pulse" />
+              <Input
+                id="diastolic"
+                type="number"
+                value={diastolic}
+                onChange={(e) => setDiastolic(e.target.value)}
+                disabled={loading}
+                placeholder="Ex: 80"
+                className="max-w-[120px]"
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     switch (category.fieldType) {
       case "text":
         return (
@@ -278,7 +343,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
                   formData[category.id] === rating
                     ? "text-custom-brown"
                     : "text-gray-300"
-                }`}
+                } transition-transform hover:scale-110`}
                 disabled={loading}
               >
                 <div className="flex">
@@ -293,6 +358,7 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
                             ? "#A78C5D"
                             : "transparent"
                         }
+                        className={formData[category.id] === rating ? "animate-pulse" : ""}
                       />
                     ))}
                 </div>
@@ -320,10 +386,14 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
                   }
                   className={`evolution-option ${option.color || "bg-gray-100"} ${
                     isSelected ? "selected-option border-2 border-custom-blue" : ""
-                  } p-2 rounded-md flex items-center gap-2 text-sm`}
+                  } p-2 rounded-md flex items-center gap-2 text-sm transition-all hover:scale-105`}
                   disabled={loading}
                 >
-                  {getIconForOption(option.icon)}
+                  {isSelected ? (
+                    getIconForOption(option.icon)
+                  ) : (
+                    <div className="w-4 h-4"></div>
+                  )}
                   <span>{option.label}</span>
                 </button>
               );
@@ -397,6 +467,33 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
     );
   };
 
+  // Renderiza os indicadores de etapa
+  const renderStepIndicators = () => {
+    return (
+      <div className="flex justify-center space-x-2 mb-4">
+        {EVOLUTION_STEPS.map((step, index) => (
+          <div
+            key={step.id}
+            className={`step-indicator ${
+              index === currentStep
+                ? "step-active"
+                : index < currentStep
+                ? "step-complete"
+                : "step-incomplete"
+            }`}
+            title={step.title}
+          >
+            {index < currentStep ? (
+              <Check size={16} />
+            ) : (
+              index + 1
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -409,18 +506,18 @@ const EvolutionForm = ({ onCancel, onSuccess }: EvolutionFormProps) => {
       </CardHeader>
       <form>
         <CardContent className="space-y-6">
-          {currentStep === 0 ? (
-            renderBasicInfoStep()
-          ) : (
-            <div className="space-y-8">
-              {getCurrentStepCategories().map((category: any) => (
-                <div key={category.id} className="space-y-2">
-                  <Label>{category.title}</Label>
-                  {renderField(category)}
-                </div>
-              ))}
-            </div>
-          )}
+          {renderStepIndicators()}
+          
+          {currentStep === 0 && renderBasicInfoStep()}
+          
+          <div className="space-y-8">
+            {getCurrentStepCategories().map((category: any) => (
+              <div key={category.id} className="space-y-2">
+                <Label>{category.title}</Label>
+                {renderField(category)}
+              </div>
+            ))}
+          </div>
           
           {/* Progress indicator */}
           <div className="w-full bg-gray-200 rounded-full h-2 mt-6">

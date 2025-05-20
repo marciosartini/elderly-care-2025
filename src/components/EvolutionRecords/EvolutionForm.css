@@ -8,6 +8,7 @@
 
 .selected-option {
   @apply border-2 border-custom-blue font-medium;
+  animation: pulse 2s infinite;
 }
 
 .step-indicator {
@@ -16,6 +17,7 @@
 
 .step-active {
   @apply bg-custom-blue text-white;
+  animation: pulse 2s infinite;
 }
 
 .step-complete {
@@ -24,4 +26,32 @@
 
 .step-incomplete {
   @apply bg-gray-200 text-gray-600;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
 }
