@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,7 +35,7 @@ const BasicInfoStep = ({
   setDiastolic,
   loading
 }: BasicInfoStepProps) => {
-  // Function to ensure we always have a valid value for resident IDs
+  // Enhanced function to ensure we always have a valid value for resident IDs
   const getResidentId = (resident: Resident, index: number): string => {
     // First check if the resident has a valid ID
     if (resident.id && resident.id.trim() !== "") {
@@ -51,13 +51,43 @@ const BasicInfoStep = ({
     return `resident_${index}_unnamed`;
   };
 
+  const getPlaceholderId = (): string => {
+    return "no_residents_available";
+  };
+
+  // Generate resident options, ensuring no empty values
+  const getResidentOptions = () => {
+    if (residents.length === 0) {
+      return [
+        <SelectItem 
+          key="no-residents" 
+          value={getPlaceholderId()}
+        >
+          Nenhum residente disponível
+        </SelectItem>
+      ];
+    }
+
+    return residents.map((resident, index) => {
+      const residentId = getResidentId(resident, index);
+      return (
+        <SelectItem 
+          key={`resident-${residentId}`} 
+          value={residentId}
+        >
+          {resident.name && resident.name.trim() !== "" ? resident.name : `Residente ${index + 1}`}
+        </SelectItem>
+      );
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="resident">Residente *</Label>
           <Select
-            value={selectedResidentId}
+            value={selectedResidentId || getPlaceholderId()}
             onValueChange={setSelectedResidentId}
             disabled={loading}
           >
@@ -65,26 +95,7 @@ const BasicInfoStep = ({
               <SelectValue placeholder="Selecione um residente" />
             </SelectTrigger>
             <SelectContent>
-              {residents.length > 0 ? (
-                residents.map((resident, index) => {
-                  const residentId = getResidentId(resident, index);
-                  return (
-                    <SelectItem 
-                      key={`resident-${residentId}`} 
-                      value={residentId}
-                    >
-                      {resident.name && resident.name.trim() !== "" ? resident.name : `Residente ${index + 1}`}
-                    </SelectItem>
-                  );
-                })
-              ) : (
-                <SelectItem 
-                  key="no-residents" 
-                  value="no_residents_available"
-                >
-                  Nenhum residente disponível
-                </SelectItem>
-              )}
+              {getResidentOptions()}
             </SelectContent>
           </Select>
         </div>
