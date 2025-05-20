@@ -1,48 +1,20 @@
 
-import { useState, useEffect } from "react";
-import { useAuth, User, usersStore } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import UserList from "@/components/UserManagement/UserList";
 import UserForm from "@/components/UserManagement/UserForm";
-import { PlusCircle } from "lucide-react";
-import { toast } from "sonner";
+import UserManagementHeader from "@/components/UserManagement/components/UserManagementHeader";
+import { useUserManagement } from "@/hooks/useUserManagement";
 
 const UserManagement = () => {
   const { isAdmin } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
-  const [users, setUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    // Load users on mount and refresh
-    loadUsers();
-  }, []);
-
-  const loadUsers = () => {
-    setUsers(usersStore.getUsers());
-  };
-
-  const handleAddClick = () => {
-    setSelectedUser(undefined);
-    setShowForm(true);
-  };
-
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setShowForm(true);
-  };
-
-  const handleFormCancel = () => {
-    setShowForm(false);
-    setSelectedUser(undefined);
-  };
-
-  const handleFormSuccess = () => {
-    setShowForm(false);
-    setSelectedUser(undefined);
-    loadUsers(); // Refresh user list
-    toast.success(selectedUser ? "Usuário atualizado com sucesso" : "Usuário criado com sucesso");
-  };
+  const {
+    showForm,
+    selectedUser,
+    handleAddClick,
+    handleEditUser,
+    handleFormCancel,
+    handleFormSuccess,
+  } = useUserManagement();
 
   // Only admins can access this page
   if (!isAdmin()) {
@@ -56,21 +28,10 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-custom-blue">Gerenciamento de Usuários</h2>
-          <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
-        </div>
-        {!showForm && (
-          <Button 
-            onClick={handleAddClick}
-            className="bg-custom-blue hover:bg-custom-blue/90"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Usuário
-          </Button>
-        )}
-      </div>
+      <UserManagementHeader 
+        showForm={showForm} 
+        onAddClick={handleAddClick} 
+      />
 
       {showForm ? (
         <UserForm 
