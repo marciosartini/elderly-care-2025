@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +59,14 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
     }
     
     if (dateFilter) {
-      filteredEvolutions = filteredEvolutions.filter(
-        (evolution) => evolution.date === dateFilter
-      );
+      // Fix the date comparison issue by normalizing both dates
+      filteredEvolutions = filteredEvolutions.filter((evolution) => {
+        // Convert evolution.date to YYYY-MM-DD format (should already be in this format)
+        const evolutionDate = evolution.date;
+        
+        // The dateFilter is already in YYYY-MM-DD format from the input
+        return evolutionDate === dateFilter;
+      });
     }
     
     // Sort by date (newest first) and then by time
@@ -108,6 +114,14 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
 
   // Ensure the empty value is replaced with a default value for the "all residents" option
   const allResidentsValue = "all_residents";
+
+  // Format date for display (convert from YYYY-MM-DD to DD/MM/YYYY)
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "";
+    
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -172,7 +186,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
               <span>
                 Filtros ativos: 
                 {selectedResidentId && ` Residente: ${getResidentName(selectedResidentId)}`}
-                {dateFilter && ` Data: ${new Date(dateFilter).toLocaleDateString("pt-BR")}`}
+                {dateFilter && ` Data: ${formatDateForDisplay(dateFilter)}`}
               </span>
             ) : (
               <span>Sem filtros ativos</span>
@@ -204,7 +218,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
               evolutions.map((evolution) => (
                 <TableRow key={evolution.id} className="hover:bg-gray-50 transition-colors">
                   <TableCell>
-                    {new Date(evolution.date).toLocaleDateString("pt-BR")}
+                    {formatDateForDisplay(evolution.date)}
                   </TableCell>
                   <TableCell>{evolution.time}</TableCell>
                   <TableCell>{getResidentName(evolution.residentId)}</TableCell>

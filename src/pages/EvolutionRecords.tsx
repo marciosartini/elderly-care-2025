@@ -65,6 +65,14 @@ const EvolutionRecords = () => {
     }
   };
 
+  // Format date for display (convert from YYYY-MM-DD to DD/MM/YYYY)
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "";
+    
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const renderEvolutionData = (categoryId: string, value: any) => {
     const category = EVOLUTION_CATEGORIES.find((cat) => cat.id === categoryId);
     if (!category) return String(value);
@@ -165,7 +173,7 @@ const EvolutionRecords = () => {
                 <div className="space-y-1">
                   <Label className="text-muted-foreground">Data</Label>
                   <p className="font-medium">
-                    {new Date(viewingEvolution.date).toLocaleDateString("pt-BR")}
+                    {formatDateForDisplay(viewingEvolution.date)}
                   </p>
                 </div>
                 <div className="space-y-1">
