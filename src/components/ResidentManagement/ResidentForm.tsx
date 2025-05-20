@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -23,6 +22,20 @@ interface ResidentFormProps {
   resident?: Resident;
   onCancel: () => void;
   onSuccess: () => void;
+}
+
+interface ResidentFormValues {
+  name: string;
+  cpf: string;
+  birthDate: string;
+  gender: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+  email: string;
+  admissionDate: string;
 }
 
 const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
@@ -71,21 +84,21 @@ const ResidentForm = ({ resident, onCancel, onSuccess }: ResidentFormProps) => {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: ResidentFormValues) => {
     try {
       if (editing && resident) {
         // Update existing resident
         residentsStore.updateResident(resident.id, {
           ...values,
           contacts,
-        });
+        } as Resident);
         toast.success("Residente atualizado com sucesso!");
       } else {
         // Add new resident
         residentsStore.addResident({
           ...values,
           contacts,
-        });
+        } as Omit<Resident, "id">);
         toast.success("Residente cadastrado com sucesso!");
       }
       onSuccess();
