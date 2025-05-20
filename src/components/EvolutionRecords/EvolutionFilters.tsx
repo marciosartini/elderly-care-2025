@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Filter } from "lucide-react";
+import { FileText, Download, Filter, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Resident } from "@/lib/residentStore";
+import { printEvolutionReport } from "@/lib/printUtils";
+import { evolutionsStore } from "@/lib/evolutionStore";
 
 interface EvolutionFiltersProps {
   residents: Resident[];
@@ -32,11 +34,38 @@ const EvolutionFilters = ({
   const allResidentsValue = "all_residents";
 
   const handleExportPDF = () => {
-    // In a real app, we would implement PDF export here
-    toast.info("Exportação de relatório em PDF iniciada...");
-    setTimeout(() => {
-      toast.success("Relatório em PDF gerado com sucesso!");
-    }, 1500);
+    // Get filtered evolutions based on current filters
+    let evolutions = evolutionsStore.getEvolutions();
+    
+    if (selectedResidentId && selectedResidentId !== allResidentsValue) {
+      evolutions = evolutions.filter(
+        evolution => evolution.residentId === selectedResidentId
+      );
+    }
+    
+    if (dateFilter) {
+      evolutions = evolutions.filter(
+        evolution => evolution.date === dateFilter
+      );
+    }
+    
+    // Sort by date (newest first) and time
+    evolutions.sort((a, b) => {
+      if (a.date !== b.date) {
+        return b.date.localeCompare(a.date);
+      }
+      return b.time.localeCompare(a.time);
+    });
+
+    toast.info("Preparando relatório para impressão...");
+    
+    // Use the printEvolutionReport function to generate and print the report
+    printEvolutionReport(
+      evolutions, 
+      residents, 
+      selectedResidentId !== allResidentsValue ? selectedResidentId : null,
+      dateFilter || null
+    );
   };
 
   return (
@@ -90,7 +119,7 @@ const EvolutionFilters = ({
             onClick={handleExportPDF}
           >
             <FileText className="h-4 w-4" />
-            <Download className="h-4 w-4" />
+            <Printer className="h-4 w-4" />
             Exportar Relatório
           </Button>
         </div>
@@ -100,7 +129,7 @@ const EvolutionFilters = ({
           {selectedResidentId || dateFilter ? (
             <span>
               Filtros ativos: 
-              {selectedResidentId && ` Residente: ${getResidentName(selectedResidentId)}`}
+              {selectedResidentId && selectedResidentId !== allResidentsValue && ` Residente: ${getResidentName(selectedResidentId)}`}
               {dateFilter && ` Data: ${formatDateForDisplay(dateFilter)}`}
             </span>
           ) : (
