@@ -113,7 +113,7 @@ const EvolutionList = ({ onView }: EvolutionListProps) => {
                   <SelectValue placeholder="Todos os residentes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os residentes</SelectItem>
+                  <SelectItem value="all">Todos os residentes</SelectItem>
                   {residents.map((resident) => (
                     <SelectItem key={resident.id} value={resident.id}>
                       {resident.name}
