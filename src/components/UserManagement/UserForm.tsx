@@ -7,6 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 interface UserFormProps {
   user?: User;
@@ -20,95 +31,83 @@ interface ExtendedUser extends User {
   password?: string;
 }
 
+// Define the access levels, roles, and status options
+const ACCESS_LEVELS = [
+  { value: "limited", label: "Limitado" },
+  { value: "basic", label: "Básico" },
+  { value: "full", label: "Completo" }
+];
+
+const USER_ROLES = [
+  { value: "user", label: "Usuário" },
+  { value: "admin", label: "Administrador" }
+];
+
+const USER_STATUSES = [
+  { value: "active", label: "Ativo" },
+  { value: "pending", label: "Pendente" }
+];
+
+// Form schema
+const userFormSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  role: z.enum(["admin", "user"]),
+  status: z.enum(["active", "pending"]),
+  accessLevel: z.enum(["basic", "full", "limited"]),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional().or(z.literal('')),
+  confirmPassword: z.string().optional().or(z.literal(''))
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Senhas não coincidem",
+  path: ["confirmPassword"],
+});
+
 const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
-  const [status, setStatus] = useState<"active" | "pending">("active");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [accessLevel, setAccessLevel] = useState<"basic" | "full" | "limited">("basic");
   const [loading, setLoading] = useState(false);
   const isEditing = !!user;
+  const isProtectedUser = isEditing && user?.email === 'msartini@gmail.com';
 
-  useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setEmail(user.email);
-      setRole(user.role);
-      setStatus(user.status as "active" | "pending");
-      // Safely access accessLevel if it exists
-      setAccessLevel((user as ExtendedUser).accessLevel || "basic");
-    }
-  }, [user]);
+  // Initialize form with user data or defaults
+  const form = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      name: user?.name || "",
+      email: user?.email || "",
+      role: user?.role || "user",
+      status: (user?.status as "active" | "pending") || "active",
+      accessLevel: (user as ExtendedUser)?.accessLevel || "basic",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-  const validateForm = () => {
-    if (!name.trim()) {
-      toast.error("Nome é obrigatório");
-      return false;
-    }
-
-    if (!email.trim()) {
-      toast.error("Email é obrigatório");
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Email inválido");
-      return false;
-    }
-
-    if (!isEditing && !password) {
-      toast.error("Senha é obrigatória para novos usuários");
-      return false;
-    }
-
-    if (password && password.length < 6) {
-      toast.error("Senha deve ter pelo menos 6 caracteres");
-      return false;
-    }
-
-    if (password && password !== confirmPassword) {
-      toast.error("Senhas não coincidem");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
+  const handleSubmit = (values: z.infer<typeof userFormSchema>) => {
     setLoading(true);
 
     try {
       if (isEditing && user) {
         const updateData: Partial<ExtendedUser> = {
-          name,
-          email,
-          role,
-          status: status as "active" | "pending",
-          accessLevel
+          name: values.name,
+          role: values.role,
+          status: values.status,
+          accessLevel: values.accessLevel
         };
 
         // Only update password if provided
-        if (password) {
-          updateData.password = password;
+        if (values.password) {
+          updateData.password = values.password;
         }
 
         usersStore.updateUser(user.id, updateData as Partial<User>);
         toast.success("Usuário atualizado com sucesso");
       } else {
         usersStore.addUser({
-          name,
-          email,
-          role,
-          status: 'active', // Admin creates active users
-          accessLevel,
-          password: password
+          name: values.name,
+          email: values.email,
+          role: values.role,
+          status: values.status,
+          accessLevel: values.accessLevel,
+          password: values.password
         } as Omit<User, "id" | "createdAt">);
         toast.success("Usuário criado com sucesso");
       }
@@ -127,121 +126,183 @@ const UserForm = ({ user, onCancel, onSuccess }: UserFormProps) => {
       <CardHeader>
         <CardTitle>{isEditing ? "Editar Usuário" : "Novo Usuário"}</CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      disabled={loading || isProtectedUser} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      disabled={loading || isEditing} // Email can't be edited for existing users
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Função</Label>
-              <Select
-                value={role}
-                onValueChange={(value) => setRole(value as "admin" | "user")}
-                disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Função</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={loading || isProtectedUser}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma função" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {USER_ROLES.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={(value) => setStatus(value as "active" | "pending")}
-                disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  {/* Removed "inactive" option since it's not in the expected type */}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="accessLevel">Nível de Acesso</Label>
-            <Select
-              value={accessLevel}
-              onValueChange={(value) => setAccessLevel(value as "basic" | "full" | "limited")}
-              disabled={loading || (isEditing && user?.email === 'msartini@gmail.com')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um nível de acesso" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="limited">Limitado</SelectItem>
-                <SelectItem value="basic">Básico</SelectItem>
-                <SelectItem value="full">Completo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Password field - shown always for new users, optional for editing */}
-          <div className="space-y-2">
-            <Label htmlFor="password">{isEditing ? "Nova Senha (opcional)" : "Senha"}</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              required={!isEditing}
-            />
-          </div>
-
-          {(password || !isEditing) && (
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-                required={!isEditing || !!password}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={loading || isProtectedUser}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {USER_STATUSES.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          )}
-        </CardContent>
-        
-        <CardFooter className="flex justify-between">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={loading} className="bg-custom-blue hover:bg-custom-blue/90">
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
-        </CardFooter>
-      </form>
+
+            <FormField
+              control={form.control}
+              name="accessLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nível de Acesso</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={loading || isProtectedUser}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um nível de acesso" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ACCESS_LEVELS.map((level) => (
+                        <SelectItem key={level.value} value={level.value}>
+                          {level.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{isEditing ? "Nova Senha (opcional)" : "Senha"}</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      {...field} 
+                      disabled={loading || isProtectedUser} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar Senha</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      {...field} 
+                      disabled={loading || isProtectedUser} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          
+          <CardFooter className="flex justify-between">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="bg-custom-blue hover:bg-custom-blue/90"
+            >
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 };

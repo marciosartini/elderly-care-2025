@@ -1,6 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 // User types
 export interface User {
@@ -10,6 +11,7 @@ export interface User {
   role: 'admin' | 'user';
   status: 'pending' | 'active';
   createdAt: Date;
+  accessLevel?: 'basic' | 'full' | 'limited';
 }
 
 // Auth context type
@@ -34,10 +36,16 @@ const adminUser: User = {
   role: 'admin',
   status: 'active',
   createdAt: new Date(),
+  accessLevel: 'full',
 };
 
 // Mock users for the demo (would be stored in a database)
 const initialUsers: User[] = [adminUser];
+
+// Mock password store - in a real app this would be hashed and stored securely
+const userPasswords: Record<string, string> = {
+  'msartini@gmail.com': '123456',
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -57,16 +65,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // Validate admin credentials for demo purposes
-      if (email === 'msartini@gmail.com' && password === '123456') {
-        setCurrentUser(adminUser);
-        localStorage.setItem('cuidarUser', JSON.stringify(adminUser));
-        return true;
+      // Get user from store
+      const foundUser = usersStore.getUserByEmail(email);
+      if (!foundUser) {
+        toast.error('Usuário não encontrado');
+        return false;
       }
       
-      // In a real app, would check other users in the database
-      toast.error('Credenciais inválidas');
-      return false;
+      // Check if user is active
+      if (foundUser.status !== 'active') {
+        toast.error('Usuário pendente de aprovação');
+        return false;
+      }
+      
+      // Check password
+      const storedPassword = userPasswords[email];
+      if (!storedPassword || storedPassword !== password) {
+        toast.error('Credenciais inválidas');
+        return false;
+      }
+      
+      setCurrentUser(foundUser);
+      localStorage.setItem('cuidarUser', JSON.stringify(foundUser));
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao realizar login');
@@ -88,14 +109,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // In a real app, would send a reset email
-      if (email === 'msartini@gmail.com') {
-        toast.success('Instruções para redefinição de senha enviadas para seu email');
-        return true;
+      const foundUser = usersStore.getUserByEmail(email);
+      if (!foundUser) {
+        toast.error('Email não encontrado');
+        return false;
       }
       
-      toast.error('Email não encontrado');
-      return false;
+      // In a real app, would send a reset email
+      toast.success('Instruções para redefinição de senha enviadas para seu email');
+      return true;
     } catch (error) {
       console.error('Password reset error:', error);
       toast.error('Erro ao processar solicitação');
@@ -110,15 +132,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // In a real app, would verify current password and update
-      if (currentPassword === '123456') {
-        // Update the password in a real system
-        toast.success('Senha atualizada com sucesso');
-        return true;
+      if (!currentUser) {
+        toast.error('Nenhum usuário logado');
+        return false;
       }
       
-      toast.error('Senha atual incorreta');
-      return false;
+      // Check current password
+      const storedPassword = userPasswords[currentUser.email];
+      if (!storedPassword || storedPassword !== currentPassword) {
+        toast.error('Senha atual incorreta');
+        return false;
+      }
+      
+      // Update password in mock store
+      userPasswords[currentUser.email] = newPassword;
+      toast.success('Senha atualizada com sucesso');
+      return true;
     } catch (error) {
       console.error('Password update error:', error);
       toast.error('Erro ao atualizar senha');
@@ -158,18 +187,37 @@ export function useAuth() {
 export const usersStore = {
   users: [...initialUsers],
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => {
+    // Check if email already exists
+    const existingUser = usersStore.getUserByEmail(user.email);
+    if (existingUser) {
+      throw new Error('Email already exists');
+    }
+    
     const newUser: User = {
       ...user,
-      id: (usersStore.users.length + 1).toString(),
+      id: uuidv4(),
       createdAt: new Date(),
     };
+    
+    // Store the password (in a real app this would be hashed)
+    if ('password' in user && user.password) {
+      userPasswords[user.email] = user.password as string;
+    }
+    
     usersStore.users.push(newUser);
     return newUser;
   },
   updateUser: (id: string, userData: Partial<User>) => {
     const index = usersStore.users.findIndex(user => user.id === id);
     if (index !== -1) {
+      // Update user data
       usersStore.users[index] = { ...usersStore.users[index], ...userData };
+      
+      // Update password if provided
+      if ('password' in userData && userData.password) {
+        userPasswords[usersStore.users[index].email] = userData.password as string;
+      }
+      
       return true;
     }
     return false;
@@ -177,6 +225,10 @@ export const usersStore = {
   deleteUser: (id: string) => {
     const index = usersStore.users.findIndex(user => user.id === id);
     if (index !== -1) {
+      // Remove password entry
+      delete userPasswords[usersStore.users[index].email];
+      
+      // Remove user
       usersStore.users.splice(index, 1);
       return true;
     }
@@ -184,6 +236,9 @@ export const usersStore = {
   },
   getUserById: (id: string) => {
     return usersStore.users.find(user => user.id === id) || null;
+  },
+  getUserByEmail: (email: string) => {
+    return usersStore.users.find(user => user.email === email) || null;
   },
   getUsers: () => {
     return [...usersStore.users];

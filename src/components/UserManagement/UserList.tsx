@@ -28,6 +28,26 @@ interface UserListProps {
   onEdit: (user: User) => void;
 }
 
+// Helper function to get access level label
+const getAccessLevelLabel = (level?: string) => {
+  switch(level) {
+    case "limited": return "Limitado";
+    case "basic": return "Básico";
+    case "full": return "Completo";
+    default: return "Básico";
+  }
+};
+
+// Helper function to get access level color
+const getAccessLevelColor = (level?: string) => {
+  switch(level) {
+    case "limited": return "border-yellow-500 text-yellow-500";
+    case "full": return "bg-purple-600";
+    case "basic": 
+    default: return "bg-blue-500";
+  }
+};
+
 const UserList = ({ onEdit }: UserListProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,6 +60,13 @@ const UserList = ({ onEdit }: UserListProps) => {
   }, []);
 
   const handleDeleteUser = (id: string) => {
+    // Don't allow deleting the admin user
+    const user = usersStore.getUserById(id);
+    if (user && user.email === 'msartini@gmail.com') {
+      toast.error("Não é possível excluir o administrador principal");
+      return;
+    }
+    
     setSelectedUserId(id);
     setPendingAction('delete');
     setDialogOpen(true);
@@ -79,6 +106,7 @@ const UserList = ({ onEdit }: UserListProps) => {
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Função</TableHead>
+              <TableHead>Acesso</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -86,7 +114,7 @@ const UserList = ({ onEdit }: UserListProps) => {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Nenhum usuário cadastrado
                 </TableCell>
               </TableRow>
@@ -101,6 +129,11 @@ const UserList = ({ onEdit }: UserListProps) => {
                     ) : (
                       <Badge className="bg-custom-green">Usuário</Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getAccessLevelColor(user.accessLevel)}>
+                      {getAccessLevelLabel(user.accessLevel)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {user.status === 'pending' ? (
@@ -130,14 +163,17 @@ const UserList = ({ onEdit }: UserListProps) => {
                     >
                       Editar
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      Excluir
-                    </Button>
+                    {/* Don't show delete button for admin user */}
+                    {user.email !== 'msartini@gmail.com' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        Excluir
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

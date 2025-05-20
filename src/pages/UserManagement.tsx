@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useAuth, User, usersStore } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import UserList from "@/components/UserManagement/UserList";
 import UserForm from "@/components/UserManagement/UserForm";
 import { PlusCircle } from "lucide-react";
@@ -42,7 +41,7 @@ const UserManagement = () => {
     setShowForm(false);
     setSelectedUser(undefined);
     loadUsers(); // Refresh user list
-    toast.success(selectedUser ? "Usuário atualizado" : "Usuário criado");
+    toast.success(selectedUser ? "Usuário atualizado com sucesso" : "Usuário criado com sucesso");
   };
 
   // Only admins can access this page
