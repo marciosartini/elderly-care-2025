@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { EvolutionEntry, EVOLUTION_CATEGORIES } from "@/lib/evolutionStore";
+import { EvolutionEntry } from "@/lib/evolutionStore";
 import { residentsStore } from "@/lib/residentStore";
 import { ReactNode } from "react";
-import { HeartPulse, Droplet, Activity, Brain, Users, Star } from "lucide-react";
+import { HeartPulse, Droplet, Activity, Brain, Users, Star, FileText } from "lucide-react";
+import { ALL_CATEGORIES } from "./data/evolutionSteps";
 
 interface EvolutionDetailsProps {
   evolution: EvolutionEntry;
@@ -21,7 +22,7 @@ const EvolutionDetails = ({ evolution, onBackClick }: EvolutionDetailsProps) => 
   };
 
   const getCategoryTitle = (categoryId: string) => {
-    const category = EVOLUTION_CATEGORIES.find((cat) => cat.id === categoryId);
+    const category = ALL_CATEGORIES.find((cat) => cat.id === categoryId);
     return category?.title || categoryId;
   };
 
@@ -51,13 +52,15 @@ const EvolutionDetails = ({ evolution, onBackClick }: EvolutionDetailsProps) => 
         return <Users className="text-green-500 animate-pulse" size={20} />;
       case "satisfactionLevel":
         return <Star className="text-custom-brown animate-pulse" size={20} />;
+      case "notes":
+        return <FileText className="text-blue-700 animate-pulse" size={20} />;
       default:
         return null;
     }
   };
 
   const renderEvolutionData = (categoryId: string, value: any): ReactNode => {
-    const category = EVOLUTION_CATEGORIES.find((cat) => cat.id === categoryId);
+    const category = ALL_CATEGORIES.find((cat) => cat.id === categoryId);
     if (!category) return String(value);
 
     switch (category.fieldType) {
