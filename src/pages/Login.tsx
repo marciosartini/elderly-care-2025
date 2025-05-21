@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/auth/AuthContext"; // Updated import
+import { useAuth } from "@/contexts/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,10 +30,12 @@ const Login = () => {
     }
     
     setLoading(true);
+    console.log("Enviando login para:", email);
     const success = await login(email, password);
     setLoading(false);
     
     if (success) {
+      console.log("Login successful, redirecting to dashboard");
       navigate("/dashboard");
     }
   };

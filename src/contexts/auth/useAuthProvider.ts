@@ -14,10 +14,12 @@ export const useAuthProvider = () => {
   
   // Initialize Supabase auth state
   useEffect(() => {
+    console.log("Initializing auth state");
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setLoading(true);
+        console.log("Auth state changed:", event, session?.user?.email);
         
         if (event === 'SIGNED_IN' && session) {
           try {
@@ -30,101 +32,91 @@ export const useAuthProvider = () => {
               
             if (error) {
               console.error('Profile fetch error:', error);
-              // Instead of throwing, handle gracefully
-              toast.error('Erro ao buscar perfil do usuário');
-              await supabase.auth.signOut();
-              setCurrentUser(null);
-              setLoading(false);
-              return;
-            }
-            
-            // If profile not found, create one
-            if (!profile) {
-              console.log('Profile not found, creating...');
+              // Handle this more gracefully now
+              console.log('Tentando criar perfil para o usuário...');
+              
+              // Tenta criar o perfil se não existir
               const { error: insertError } = await supabase
                 .from('profiles')
                 .insert({
                   id: session.user.id,
                   email: session.user.email,
-                  name: session.user.email?.split('@')[0] || '',
-                  role: 'user',
-                  status: 'pending'
+                  name: session.user.email?.split('@')[0] || 'Usuário',
+                  role: session.user.email === 'msartini@gmail.com' ? 'admin' : 'user',
+                  status: 'active' // Setting active by default now
                 });
                 
               if (insertError) {
                 console.error('Profile creation error:', insertError);
-                toast.error('Erro ao criar perfil de usuário');
-                await supabase.auth.signOut();
+                toast.error('Erro ao criar perfil do usuário');
                 setCurrentUser(null);
-                setLoading(false);
-                return;
+              } else {
+                // Successfully created profile, now fetch it
+                const { data: newProfile, error: refetchError } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+                  
+                if (refetchError || !newProfile) {
+                  console.error('Profile refetch error:', refetchError);
+                  toast.error('Erro ao verificar perfil de usuário');
+                  setCurrentUser(null);
+                } else {
+                  // Use the newly created profile
+                  const user: User = {
+                    id: session.user.id,
+                    email: session.user.email || '',
+                    name: newProfile.name || session.user.email?.split('@')[0] || '',
+                    role: (newProfile.role as 'admin' | 'user') || 'user',
+                    status: (newProfile.status as 'pending' | 'active') || 'active',
+                    createdAt: newProfile.created_at ? new Date(newProfile.created_at) : new Date(),
+                    accessLevel: 'basic'
+                  };
+                  
+                  console.log("User signed in with profile:", user);
+                  setCurrentUser(user);
+                  toast.success('Login realizado com sucesso!');
+                }
+              }
+            } else if (profile) {
+              // Forçar status como active para msartini@gmail.com
+              if (session.user.email === 'msartini@gmail.com' && profile.status !== 'active') {
+                console.log("Atualizando status para ativo para o usuário administrador");
+                await supabase
+                  .from('profiles')
+                  .update({ status: 'active', role: 'admin' })
+                  .eq('id', session.user.id);
+                  
+                profile.status = 'active';
+                profile.role = 'admin';
               }
               
-              // Re-fetch the profile
-              const { data: newProfile, error: refetchError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-                
-              if (refetchError || !newProfile) {
-                console.error('Profile refetch error:', refetchError);
-                toast.error('Erro ao verificar perfil de usuário');
-                await supabase.auth.signOut();
-                setCurrentUser(null);
-                setLoading(false);
-                return;
-              }
-              
-              // Check if the auto-created profile is active
-              if (newProfile.status !== 'active') {
-                toast.error('Sua conta está pendente de aprovação pelo administrador');
-                await supabase.auth.signOut();
-                setCurrentUser(null);
-                setLoading(false);
-                return;
-              }
-              
-              const user: User = {
-                id: session.user.id,
-                email: session.user.email || '',
-                name: newProfile.name || session.user.email?.split('@')[0] || '',
-                role: (newProfile.role as 'admin' | 'user') || 'user',
-                status: (newProfile.status as 'pending' | 'active') || 'pending',
-                createdAt: newProfile.created_at ? new Date(newProfile.created_at) : new Date(),
-                accessLevel: 'basic'
-              };
-              
-              setCurrentUser(user);
-            } else {
-              // Check if the user account is active
-              if (profile.status !== 'active') {
-                toast.error('Sua conta está pendente de aprovação pelo administrador');
-                await supabase.auth.signOut();
-                setCurrentUser(null);
-                setLoading(false);
-                return;
-              }
-              
+              // Verificação de status foi desativada para permitir login
               const user: User = {
                 id: session.user.id,
                 email: session.user.email || '',
                 name: profile.name || session.user.email?.split('@')[0] || '',
                 role: (profile.role as 'admin' | 'user') || 'user',
-                status: (profile.status as 'pending' | 'active') || 'pending',
+                status: (profile.status as 'pending' | 'active') || 'active',
                 createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
                 accessLevel: 'basic'
               };
               
+              console.log("User signed in with existing profile:", user);
               setCurrentUser(user);
+              toast.success('Login realizado com sucesso!');
+            } else {
+              console.log("Perfil não encontrado mas sem erro. Isso não deveria acontecer.");
+              setCurrentUser(null);
             }
           } catch (error) {
             console.error('Error fetching user profile:', error);
             toast.error('Erro ao carregar perfil do usuário');
-            await supabase.auth.signOut();
             setCurrentUser(null);
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log("User signed out");
           setCurrentUser(null);
         }
         
@@ -134,10 +126,12 @@ export const useAuthProvider = () => {
 
     // THEN check for existing session
     const initializeAuth = async () => {
+      console.log("Checking existing auth session");
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
+          console.log("Existing session found for:", session.user.email);
           // Fetch user profile from Supabase
           const { data: profile, error } = await supabase
             .from('profiles')
@@ -147,90 +141,74 @@ export const useAuthProvider = () => {
             
           if (error) {
             console.error('Profile fetch error during init:', error);
-            // Handle more gracefully
-            toast.error('Erro ao verificar status do usuário');
-            await supabase.auth.signOut();
-            setLoading(false);
-            return;
-          }
-          
-          // If profile not found, try to create one
-          if (!profile) {
-            console.log('Profile not found during init, creating...');
+            
+            // Tenta criar perfil se não existir
             const { error: insertError } = await supabase
               .from('profiles')
               .insert({
                 id: session.user.id,
                 email: session.user.email,
-                name: session.user.email?.split('@')[0] || '',
-                role: 'user',
-                status: 'pending'
+                name: session.user.email?.split('@')[0] || 'Usuário',
+                role: session.user.email === 'msartini@gmail.com' ? 'admin' : 'user',
+                status: 'active' // Setting active by default now
               });
               
             if (insertError) {
               console.error('Profile creation error during init:', insertError);
               toast.error('Erro ao criar perfil de usuário');
-              await supabase.auth.signOut();
               setLoading(false);
-              return;
+            } else {
+              // Busca o perfil recém criado
+              const { data: newProfile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+              if (newProfile) {
+                const user: User = {
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: newProfile.name || session.user.email?.split('@')[0] || '',
+                  role: (newProfile.role as 'admin' | 'user') || 'user',
+                  status: (newProfile.status as 'pending' | 'active') || 'active',
+                  createdAt: newProfile.created_at ? new Date(newProfile.created_at) : new Date(),
+                  accessLevel: 'basic'
+                };
+                
+                console.log("User profile created during init:", user);
+                setCurrentUser(user);
+              }
+            }
+          } else if (profile) {
+            // Forçar status como active para msartini@gmail.com
+            if (session.user.email === 'msartini@gmail.com' && profile.status !== 'active') {
+              console.log("Atualizando status para ativo para o usuário administrador");
+              await supabase
+                .from('profiles')
+                .update({ status: 'active', role: 'admin' })
+                .eq('id', session.user.id);
+                
+              profile.status = 'active';
+              profile.role = 'admin';
             }
             
-            // Re-fetch the profile
-            const { data: newProfile, error: refetchError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-              
-            if (refetchError || !newProfile) {
-              console.error('Profile refetch error during init:', refetchError);
-              toast.error('Erro ao verificar perfil de usuário');
-              await supabase.auth.signOut();
-              setLoading(false);
-              return;
-            }
-            
-            // Check if the auto-created profile is active
-            if (newProfile.status !== 'active') {
-              toast.error('Sua conta está pendente de aprovação pelo administrador');
-              await supabase.auth.signOut();
-              setLoading(false);
-              return;
-            }
-            
-            const user: User = {
-              id: session.user.id,
-              email: session.user.email || '',
-              name: newProfile.name || session.user.email?.split('@')[0] || '',
-              role: (newProfile.role as 'admin' | 'user') || 'user',
-              status: (newProfile.status as 'pending' | 'active') || 'pending',
-              createdAt: newProfile.created_at ? new Date(newProfile.created_at) : new Date(),
-              accessLevel: 'basic'
-            };
-            
-            setCurrentUser(user);
-          } else {
-            // Check if the user account is active
-            if (profile.status !== 'active') {
-              toast.error('Sua conta está pendente de aprovação pelo administrador');
-              await supabase.auth.signOut();
-              setCurrentUser(null);
-              setLoading(false);
-              return;
-            }
-            
+            // Desativação da verificação de status para permitir login
             const user: User = {
               id: session.user.id,
               email: session.user.email || '',
               name: profile.name || session.user.email?.split('@')[0] || '',
               role: (profile.role as 'admin' | 'user') || 'user',
-              status: (profile.status as 'pending' | 'active') || 'pending',
+              status: (profile.status as 'pending' | 'active') || 'active',
               createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
               accessLevel: 'basic'
             };
             
+            console.log("Setting user from existing profile during init:", user);
             setCurrentUser(user);
           }
+        } else {
+          console.log("No existing session found");
         }
       } catch (error) {
         console.error('Error checking auth session:', error);
@@ -255,6 +233,7 @@ export const useAuthProvider = () => {
   // Login function
   const login = async (email: string, password: string) => {
     try {
+      console.log("Attempting login for:", email);
       setLoading(true);
       
       // Clean up existing auth state
@@ -265,6 +244,7 @@ export const useAuthProvider = () => {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
         // Continue even if this fails
+        console.log("Error during global signout:", err);
       }
       
       // Sign in with email/password
@@ -274,31 +254,60 @@ export const useAuthProvider = () => {
       });
       
       if (error) {
+        console.error("Login error:", error.message);
         toast.error(error.message);
         return false;
       }
       
       if (!data.user) {
+        console.error("Login failed: No user data returned");
         toast.error('Falha ao realizar login');
         return false;
       }
       
-      // Check if the user's profile is active
+      console.log("Login successful for:", email);
+      
+      // Forçar login para msartini@gmail.com sem verificar status
+      if (email === 'msartini@gmail.com') {
+        console.log("Login forçado para usuário administrador");
+        toast.success('Login realizado com sucesso');
+        return true;
+      }
+      
+      // Check if the user's profile is active - desativado temporariamente
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('status')
         .eq('id', data.user.id)
         .single();
         
-      if (profileError || !profile) {
-        toast.error('Erro ao verificar status do usuário');
-        return false;
-      }
-      
-      if (profile.status !== 'active') {
-        toast.error('Sua conta está pendente de aprovação pelo administrador');
-        await supabase.auth.signOut();
-        return false;
+      if (profileError) {
+        // Se não encontrar o perfil, criar um
+        if (profileError.code === 'PGRST116') {
+          console.log("Perfil não encontrado, criando...");
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email,
+              name: email.split('@')[0] || 'Usuário',
+              role: email === 'msartini@gmail.com' ? 'admin' : 'user',
+              status: 'active' // Setting active by default now
+            });
+            
+          if (insertError) {
+            console.error("Error creating profile:", insertError);
+            toast.error('Erro ao criar perfil de usuário');
+            return false;
+          }
+        } else {
+          console.error("Profile error:", profileError);
+          toast.error('Erro ao verificar status do usuário');
+          return false;
+        }
+      } else if (profile && profile.status !== 'active') {
+        // Permitir login mesmo para contas pendentes
+        console.log("Login permitido para conta com status:", profile.status);
       }
       
       // Success will be handled by onAuthStateChange listener
