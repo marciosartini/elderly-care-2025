@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, usersStore } from "@/contexts/AuthContext";
+import { User } from "@/types/user";
+import { supabaseUserStore } from "@/stores/supabaseUserStore";
 import { userFormSchema, UserFormValues } from "../schemas/userFormSchema";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
     },
   });
 
-  const handleSubmit = (values: UserFormValues) => {
+  const handleSubmit = async (values: UserFormValues) => {
     setLoading(true);
 
     try {
@@ -53,10 +54,13 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
           updateData.password = values.password;
         }
 
-        usersStore.updateUser(user.id, updateData as Partial<User>);
-        toast.success("Usuário atualizado com sucesso");
+        const success = await supabaseUserStore.updateUser(user.id, updateData as Partial<User>);
+        if (success) {
+          toast.success("Usuário atualizado com sucesso");
+          onSuccess();
+        }
       } else {
-        usersStore.addUser({
+        const success = await supabaseUserStore.addUser({
           name: values.name,
           email: values.email,
           role: values.role,
@@ -64,10 +68,12 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
           accessLevel: values.accessLevel,
           password: values.password
         } as Omit<User, "id" | "createdAt">);
-        toast.success("Usuário criado com sucesso");
+        
+        if (success) {
+          toast.success("Usuário criado com sucesso");
+          onSuccess();
+        }
       }
-      
-      onSuccess();
     } catch (error) {
       console.error("Error saving user:", error);
       toast.error("Erro ao salvar usuário. Tente novamente.");

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@/types/user';
@@ -47,8 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: session.user.id,
               email: session.user.email || '',
               name: profile?.name || session.user.email?.split('@')[0] || '',
-              role: profile?.role || 'user',
-              status: profile?.status || 'pending',
+              role: (profile?.role as 'admin' | 'user') || 'user',
+              status: (profile?.status as 'pending' | 'active') || 'pending',
               createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
             };
             
@@ -83,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: session.user.id,
             email: session.user.email || '',
             name: profile?.name || session.user.email?.split('@')[0] || '',
-            role: profile?.role || 'user',
-            status: profile?.status || 'pending',
+            role: (profile?.role as 'admin' | 'user') || 'user',
+            status: (profile?.status as 'pending' | 'active') || 'pending',
             createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
           };
           
@@ -174,6 +173,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data.user) {
         toast.error('Falha ao criar conta');
         return false;
+      }
+      
+      // Insert the user profile
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email: email,
+        name: name,
+        role: 'user',
+        status: 'pending'
+      });
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
       }
       
       toast.success('Conta criada com sucesso! Aguarde aprovação do administrador.');

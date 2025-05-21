@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { User } from "@/types/user";
-import { usersStore } from "@/stores/userStore";
+import { supabaseUserStore } from "@/stores/supabaseUserStore";
 import { toast } from "sonner";
 
 export const useUserList = () => {
@@ -12,12 +12,17 @@ export const useUserList = () => {
 
   // Load users
   useEffect(() => {
-    setUsers(usersStore.getUsers());
+    const loadUsers = async () => {
+      const loadedUsers = await supabaseUserStore.getUsers();
+      setUsers(loadedUsers);
+    };
+    
+    loadUsers();
   }, []);
 
   const handleDeleteUser = (id: string) => {
     // Don't allow deleting the admin user
-    const user = usersStore.getUserById(id);
+    const user = users.find(u => u.id === id);
     if (user && user.email === 'msartini@gmail.com') {
       toast.error("Não é possível excluir o administrador principal");
       return;
@@ -34,17 +39,25 @@ export const useUserList = () => {
     setDialogOpen(true);
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
     if (!selectedUserId) return;
 
     if (pendingAction === 'delete') {
-      usersStore.deleteUser(selectedUserId);
-      setUsers(usersStore.getUsers());
-      toast.success("Usuário removido com sucesso");
+      const success = await supabaseUserStore.deleteUser(selectedUserId);
+      if (success) {
+        setUsers(users.filter(user => user.id !== selectedUserId));
+        toast.success("Usuário removido com sucesso");
+      }
     } else if (pendingAction === 'approve') {
-      usersStore.updateUser(selectedUserId, { status: 'active' });
-      setUsers(usersStore.getUsers());
-      toast.success("Usuário aprovado com sucesso");
+      const success = await supabaseUserStore.updateUser(selectedUserId, { status: 'active' });
+      if (success) {
+        setUsers(users.map(user => 
+          user.id === selectedUserId 
+            ? { ...user, status: 'active' } 
+            : user
+        ));
+        toast.success("Usuário aprovado com sucesso");
+      }
     }
 
     setDialogOpen(false);

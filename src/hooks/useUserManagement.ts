@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { User, usersStore } from "@/contexts/AuthContext";
+import { User } from "@/types/user";
+import { supabaseUserStore } from "@/stores/supabaseUserStore";
 import { toast } from "sonner";
 
 export const useUserManagement = () => {
@@ -13,8 +14,9 @@ export const useUserManagement = () => {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    setUsers(usersStore.getUsers());
+  const loadUsers = async () => {
+    const loadedUsers = await supabaseUserStore.getUsers();
+    setUsers(loadedUsers);
   };
 
   const handleAddClick = () => {
