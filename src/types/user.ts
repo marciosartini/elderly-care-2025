@@ -7,8 +7,10 @@ export interface User {
   status: 'pending' | 'active';
   createdAt: Date;
   accessLevel?: 'basic' | 'full' | 'limited';
+  password?: string; // Add password as an optional property
 }
 
-export type UserWithPassword = Omit<User, 'id' | 'createdAt'> & {
-  password?: string;
+export type UserWithPassword = User & {
+  password: string;
 };
+

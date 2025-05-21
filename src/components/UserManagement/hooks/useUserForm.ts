@@ -7,12 +7,6 @@ import { supabaseUserStore } from "@/stores/supabaseUserStore";
 import { userFormSchema, UserFormValues } from "../schemas/userFormSchema";
 import { toast } from "sonner";
 
-// Define a type that extends User with the optional fields we're using
-interface ExtendedUser extends User {
-  accessLevel?: "basic" | "full" | "limited";
-  password?: string;
-}
-
 interface UseUserFormProps {
   user?: User;
   onSuccess: () => void;
@@ -31,7 +25,7 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
       email: user?.email || "",
       role: user?.role || "user",
       status: (user?.status as "active" | "pending") || "active",
-      accessLevel: (user as ExtendedUser)?.accessLevel || "basic",
+      accessLevel: user?.accessLevel || "basic",
       password: "",
       confirmPassword: "",
     },
@@ -42,7 +36,7 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
 
     try {
       if (isEditing && user) {
-        const updateData: Partial<ExtendedUser> = {
+        const updateData: Partial<User> = {
           name: values.name,
           role: values.role,
           status: values.status,
@@ -51,10 +45,11 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
 
         // Only update password if provided
         if (values.password) {
+          // Since we updated our User type to include password, this is now type-safe
           updateData.password = values.password;
         }
 
-        const success = await supabaseUserStore.updateUser(user.id, updateData as Partial<User>);
+        const success = await supabaseUserStore.updateUser(user.id, updateData);
         if (success) {
           toast.success("Usuário atualizado com sucesso");
           onSuccess();
@@ -67,7 +62,7 @@ export const useUserForm = ({ user, onSuccess }: UseUserFormProps) => {
           status: values.status,
           accessLevel: values.accessLevel,
           password: values.password
-        } as Omit<User, "id" | "createdAt">);
+        });
         
         if (success) {
           toast.success("Usuário criado com sucesso");

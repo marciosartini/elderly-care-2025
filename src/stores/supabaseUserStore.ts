@@ -92,9 +92,11 @@ class SupabaseUserStore {
       }
       
       // Password updates are handled by Auth API
-      if (userData.password) {
+      // We now ensure userData is properly typed to include password
+      if ('password' in userData && userData.password) {
         // Note: Password updates would require additional implementation
         // via admin functions or user-specific flows
+        console.log("Password update requested but not implemented");
       }
       
       return true;
