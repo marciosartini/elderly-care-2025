@@ -8,11 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const Login = () => {
+const SignUp = () => {
   const navigate = useNavigate();
-  const { login, currentUser } = useAuth();
+  const { signup, currentUser } = useAuth();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   
   // If user is already logged in, redirect to dashboard
@@ -24,17 +26,27 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
     
+    if (password !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    
     setLoading(true);
-    const success = await login(email, password);
+    const success = await signup(email, password, name);
     setLoading(false);
     
     if (success) {
-      navigate("/dashboard");
+      navigate("/");
     }
   };
 
@@ -48,13 +60,25 @@ const Login = () => {
         
         <Card className="shadow-lg border-custom-gray/20">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Login</CardTitle>
+            <CardTitle className="text-2xl text-center">Criar Conta</CardTitle>
             <CardDescription className="text-center">
-              Entre com suas credenciais para acessar o sistema
+              Preencha os dados abaixo para se registrar
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -68,17 +92,7 @@ const Login = () => {
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Senha</Label>
-                  <Button
-                    variant="link"
-                    className="text-sm text-custom-brown p-0 h-auto"
-                    type="button"
-                    onClick={() => navigate("/forgot-password")}
-                  >
-                    Esqueceu a senha?
-                  </Button>
-                </div>
+                <Label htmlFor="password">Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -88,20 +102,31 @@ const Login = () => {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
               <Button 
                 type="submit" 
                 className="w-full bg-custom-blue hover:bg-custom-blue/90"
                 disabled={loading}
               >
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? "Registrando..." : "Registrar"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-center">
-              Não tem uma conta?{" "}
-              <Link to="/signup" className="text-custom-blue hover:underline">
-                Registrar-se
+              Já tem uma conta?{" "}
+              <Link to="/" className="text-custom-blue hover:underline">
+                Entrar
               </Link>
             </p>
           </CardFooter>
@@ -111,4 +136,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;

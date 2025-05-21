@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,13 +77,9 @@ const ForgotPassword = () => {
             )}
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button
-              variant="link"
-              onClick={() => navigate("/")}
-              className="text-custom-brown"
-            >
+            <Link to="/" className="text-custom-brown hover:underline">
               Voltar para o login
-            </Button>
+            </Link>
           </CardFooter>
         </Card>
       </div>
