@@ -1,7 +1,7 @@
 
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthContext"; // Updated import
 import {
   Sidebar,
   SidebarContent,

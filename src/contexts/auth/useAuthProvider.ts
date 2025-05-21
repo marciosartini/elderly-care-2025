@@ -1,30 +1,17 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { User } from '@/types/user';
-import { supabase, cleanupAuthState } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cleanupAuthState } from './authUtils';
 
-// Auth context type
-export type AuthContextType = {
-  currentUser: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string) => Promise<boolean>;
-  logout: () => void;
-  forgotPassword: (email: string) => Promise<boolean>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
-  isAdmin: () => boolean;
-};
-
-// Create context with default values
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+/**
+ * Hook for providing authentication state and methods
+ */
+export const useAuthProvider = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
+  
   // Initialize Supabase auth state
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -184,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Success will be handled by onAuthStateChange listener
       toast.success('Login realizado com sucesso');
-      navigate('/dashboard');
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -322,11 +308,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Check if current user is admin
-  const isAdmin = () => {
+  const isAdminUser = () => {
     return currentUser?.role === 'admin';
   };
 
-  const authValue = {
+  return {
     currentUser,
     loading,
     login,
@@ -334,18 +320,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     forgotPassword,
     updatePassword,
-    isAdmin,
+    isAdmin: isAdminUser,
   };
-  
-  return <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
-
-export type { User };
+};

@@ -1,6 +1,6 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthContext"; // Updated import
 import { Navigate, Outlet } from "react-router-dom";
 import Header from "./Header";
 import AppSidebar from "./Sidebar";

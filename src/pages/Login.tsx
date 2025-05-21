@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthContext"; // Updated import
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,9 @@ const Login = () => {
     const success = await login(email, password);
     setLoading(false);
     
-    // Navigation handled inside login function
+    if (success) {
+      navigate("/dashboard");
+    }
   };
 
   return (

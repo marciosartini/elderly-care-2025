@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types/user";
 import { toast } from "sonner";
@@ -92,7 +91,6 @@ class SupabaseUserStore {
       }
       
       // Password updates are handled by Auth API
-      // We now ensure userData is properly typed to include password
       if ('password' in userData && userData.password) {
         // In a real implementation, this would require an Edge Function
         console.log("Password update requested but not implemented");

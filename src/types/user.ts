@@ -6,11 +6,6 @@ export interface User {
   role: 'admin' | 'user';
   status: 'pending' | 'active';
   createdAt: Date;
-  accessLevel?: 'basic' | 'full' | 'limited';
-  password?: string; // Add password as an optional property
+  accessLevel: string;
+  password?: string; // Add optional password property for password updates
 }
-
-export type UserWithPassword = User & {
-  password: string;
-};
-
