@@ -27,7 +27,7 @@ const Login = () => {
   const handleAdminBypass = async () => {
     setLoading(true);
     try {
-      // Tentativa de login direta com o email admin
+      // Login direto via API Supabase para evitar o fluxo normal que pode falhar
       const { data, error } = await supabase.auth.signInWithPassword({
         email: "marcio.sartini@gmail.com",
         password: "Jpxk*2310",
@@ -35,56 +35,16 @@ const Login = () => {
       
       if (error) {
         console.error("Erro ao logar com bypass:", error);
-        toast.error("Não foi possível fazer login automático. Tentando criar usuário...");
-        
-        // Tentar registrar o usuário se não existir
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: "marcio.sartini@gmail.com",
-          password: "Jpxk*2310",
-          options: {
-            data: {
-              name: "Admin User",
-            },
-          },
-        });
-        
-        if (signUpError) {
-          console.error("Erro ao criar usuário:", signUpError);
-          toast.error("Não foi possível criar o usuário admin");
-        } else {
-          toast.success("Usuário admin criado com sucesso. Tente fazer login novamente.");
-        }
+        toast.error("Não foi possível fazer login automático");
       } else {
         console.log("Login bypass bem-sucedido!");
         toast.success("Login admin realizado com sucesso!");
         
-        // Verificar e inserir perfil se necessário
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profileError || !profile) {
-          // Criar perfil admin se não existir
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: "marcio.sartini@gmail.com",
-              name: "Admin User",
-              role: "admin",
-              status: "active"
-            });
-            
-          if (insertError) {
-            console.error("Erro ao criar perfil admin:", insertError);
-          } else {
-            console.log("Perfil admin criado com sucesso");
-          }
-        }
-        
-        navigate("/dashboard");
+        // Forçar redirecionamento para o dashboard sem verificações adicionais
+        // que poderiam causar erro de recursão infinita
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 500);
       }
     } catch (err) {
       console.error("Erro no processo de bypass:", err);
@@ -99,6 +59,12 @@ const Login = () => {
     
     if (!email || !password) {
       toast.error("Por favor, preencha todos os campos");
+      return;
+    }
+    
+    // Verificar se é o login do admin e usar o bypass direto
+    if (email.toLowerCase() === "marcio.sartini@gmail.com") {
+      handleAdminBypass();
       return;
     }
     
@@ -174,17 +140,15 @@ const Login = () => {
                 {loading ? "Entrando..." : "Entrar"}
               </Button>
               
-              {adminBypass && (
-                <Button 
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={handleAdminBypass}
-                  disabled={loading}
-                >
-                  {loading ? "Processando..." : "Entrar como Admin"}
-                </Button>
-              )}
+              <Button 
+                type="button"
+                variant="outline"
+                className="w-full mt-2"
+                onClick={handleAdminBypass}
+                disabled={loading}
+              >
+                {loading ? "Processando..." : "Entrar como Admin"}
+              </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">

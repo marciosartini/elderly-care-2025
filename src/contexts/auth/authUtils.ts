@@ -23,3 +23,10 @@ export const cleanupAuthState = () => {
   // Remove cuidarUser from localStorage (from old auth system)
   localStorage.removeItem('cuidarUser');
 };
+
+/**
+ * Determina se um usuário é o admin principal (marcio.sartini@gmail.com)
+ */
+export const isMainAdmin = (email?: string) => {
+  return email === 'marcio.sartini@gmail.com';
+};
