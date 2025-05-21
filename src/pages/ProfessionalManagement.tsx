@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Professional, professionalsStore } from "@/lib/professionalStore";
 import ProfessionalList from "@/components/ProfessionalManagement/ProfessionalList";

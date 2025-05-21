@@ -1,5 +1,4 @@
-
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthContext";
 import UserList from "@/components/UserManagement/UserList";
 import UserForm from "@/components/UserManagement/UserForm";
 import UserManagementHeader from "@/components/UserManagement/components/UserManagementHeader";

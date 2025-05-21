@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { residentsStore, Resident } from "@/lib/residentStore";
 import { evolutionsStore } from "@/lib/evolution";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { ALL_CATEGORIES, EVOLUTION_STEPS } from "../data/evolutionSteps";
 
 export const useEvolutionForm = (onSuccess: () => void) => {
