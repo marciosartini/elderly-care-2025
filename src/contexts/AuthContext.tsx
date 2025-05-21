@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@/types/user';
@@ -42,6 +43,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
             if (error) throw error;
             
+            // Check if the user account is active
+            if (profile?.status !== 'active') {
+              toast.error('Sua conta está pendente de aprovação pelo administrador.');
+              await supabase.auth.signOut();
+              setCurrentUser(null);
+              setLoading(false);
+              return;
+            }
+            
             const user: User = {
               id: session.user.id,
               email: session.user.email || '',
@@ -49,11 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: (profile?.role as 'admin' | 'user') || 'user',
               status: (profile?.status as 'pending' | 'active') || 'pending',
               createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
+              accessLevel: 'basic'
             };
             
             setCurrentUser(user);
           } catch (error) {
             console.error('Error fetching user profile:', error);
+            toast.error('Erro ao carregar perfil do usuário.');
+            await supabase.auth.signOut();
+            setCurrentUser(null);
           }
         } else if (event === 'SIGNED_OUT') {
           setCurrentUser(null);
@@ -78,6 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
           if (error) throw error;
           
+          // Check if the user account is active
+          if (profile?.status !== 'active') {
+            toast.error('Sua conta está pendente de aprovação pelo administrador.');
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            setLoading(false);
+            return;
+          }
+          
           const user: User = {
             id: session.user.id,
             email: session.user.email || '',
@@ -85,12 +108,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: (profile?.role as 'admin' | 'user') || 'user',
             status: (profile?.status as 'pending' | 'active') || 'pending',
             createdAt: profile?.created_at ? new Date(profile.created_at) : new Date(),
+            accessLevel: 'basic'
           };
           
           setCurrentUser(user);
         }
       } catch (error) {
         console.error('Error checking auth session:', error);
+        // If there's an error, sign out and clear session
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          console.error('Error signing out after session error:', e);
+        }
       } finally {
         setLoading(false);
       }
@@ -134,8 +164,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       
+      // Check if the user's profile is active
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', data.user.id)
+        .single();
+        
+      if (profileError || !profile) {
+        toast.error('Erro ao verificar status do usuário');
+        return false;
+      }
+      
+      if (profile.status !== 'active') {
+        toast.error('Sua conta está pendente de aprovação pelo administrador');
+        await supabase.auth.signOut();
+        return false;
+      }
+      
       // Success will be handled by onAuthStateChange listener
       toast.success('Login realizado com sucesso');
+      navigate('/dashboard');
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -173,19 +222,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data.user) {
         toast.error('Falha ao criar conta');
         return false;
-      }
-      
-      // Insert the user profile
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        email: email,
-        name: name,
-        role: 'user',
-        status: 'pending'
-      });
-      
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
       }
       
       toast.success('Conta criada com sucesso! Aguarde aprovação do administrador.');

@@ -26,7 +26,7 @@ class SupabaseUserStore {
         name: profile.name || '',
         role: profile.role as 'admin' | 'user',
         status: profile.status as 'pending' | 'active',
-        createdAt: new Date(profile.created_at),
+        createdAt: new Date(profile.created_at || new Date()),
         accessLevel: 'basic' // Default access level
       }));
     } catch (error) {
@@ -61,7 +61,7 @@ class SupabaseUserStore {
         name: data.name || '',
         role: data.role as 'admin' | 'user',
         status: data.status as 'pending' | 'active',
-        createdAt: new Date(data.created_at),
+        createdAt: new Date(data.created_at || new Date()),
         accessLevel: 'basic' // Default access level
       };
     } catch (error) {
@@ -94,9 +94,9 @@ class SupabaseUserStore {
       // Password updates are handled by Auth API
       // We now ensure userData is properly typed to include password
       if ('password' in userData && userData.password) {
-        // Note: Password updates would require additional implementation
-        // via admin functions or user-specific flows
+        // In a real implementation, this would require an Edge Function
         console.log("Password update requested but not implemented");
+        toast.warning("Atualização de senha requer implementação adicional");
       }
       
       return true;
@@ -108,22 +108,43 @@ class SupabaseUserStore {
   }
   
   /**
-   * Dummy addUser method - would require Supabase Edge Functions in real implementation
+   * Add a new user - requires Edge Function implementation
    */
   async addUser(userData: Omit<User, "id" | "createdAt">): Promise<boolean> {
-    // This is a placeholder - actual implementation would require Edge Functions
-    // to create the auth user and then the profile
-    toast.error("Criação de usuário pelo admin requer implementação de Edge Functions");
-    return false;
+    try {
+      // In a real implementation, this would require an Edge Function to:
+      // 1. Create auth user
+      // 2. Create profile entry
+      
+      toast.warning("Para implementar a criação de usuário pelo admin, é necessário uma Edge Function");
+      console.log("User creation requested with data:", userData);
+      
+      return false;
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast.error("Erro ao criar usuário");
+      return false;
+    }
   }
   
   /**
-   * Dummy deleteUser method - would require Supabase Edge Functions in real implementation
+   * Delete a user - requires Edge Function implementation
    */
   async deleteUser(id: string): Promise<boolean> {
-    // This is a placeholder - actual implementation would require Edge Functions
-    toast.error("Exclusão de usuário pelo admin requer implementação de Edge Functions");
-    return false;
+    try {
+      // In a real implementation, this would require an Edge Function to:
+      // 1. Delete auth user
+      // 2. Delete profile entry (could be automatic with cascade)
+      
+      toast.warning("Para implementar a exclusão de usuário pelo admin, é necessário uma Edge Function");
+      console.log("User deletion requested for ID:", id);
+      
+      return false;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Erro ao excluir usuário");
+      return false;
+    }
   }
 }
 

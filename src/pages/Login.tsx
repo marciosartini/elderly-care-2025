@@ -33,9 +33,7 @@ const Login = () => {
     const success = await login(email, password);
     setLoading(false);
     
-    if (success) {
-      navigate("/dashboard");
-    }
+    // Navigation handled inside login function
   };
 
   return (
